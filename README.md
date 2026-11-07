@@ -2,6 +2,8 @@
 
 以 Rust、Bevy 0.20.1 與 WebGPU 製作的第一人稱 3D 密室逃脫。單一原創房間，約三分鐘遊玩，完整流程包括閱讀便箋、解開保險箱、取得鑰匙、打開房門與走出書房。支援重新開始與繁體中文、英文即時切換。
 
+正式網站為 [liam652.com](https://liam652.com/)，原始碼為 [liam8846/latch](https://github.com/liam8846/latch)。
+
 ## 在瀏覽器遊玩
 
 需要支援 WebGPU、DecompressionStream 且已啟用硬體加速的新版桌面 Chrome 或 Edge。開發時可使用 `localhost`；正式站點需要 HTTPS。本專案不提供 WebGL fallback。
@@ -20,7 +22,15 @@ cargo install wasm-bindgen-cli --version 0.2.130 --locked
 node scripts/serve.mjs
 ```
 
-開啟 <http://127.0.0.1:4173>。`dist/` 是完整靜態交付目錄，可供 Cloudflare Pages 使用；本次沒有部署。建置腳本將 WASM 壓縮為 `pkg/latch_bg.wasm.gz`，確認符合單檔 25 MiB 限制後移除原始 WASM。瀏覽器透過 DecompressionStream 展開後交給 wasm-bindgen。靜態伺服器應將 `.gz` 檔案以 `application/gzip` 提供，且不設定 `Content-Encoding`，避免瀏覽器重複解壓縮。開發迭代可用 `./scripts/build-web.ps1 -Dev`。
+開啟 <http://127.0.0.1:4173>。`dist/` 是完整靜態交付目錄，可供 Cloudflare Pages 使用。建置腳本將 WASM 壓縮為 `pkg/latch_bg.wasm.gz`，確認符合單檔 25 MiB 限制後移除原始 WASM。瀏覽器透過 DecompressionStream 展開後交給 wasm-bindgen。靜態伺服器應將 `.gz` 檔案以 `application/gzip` 提供，且不設定 `Content-Encoding`，避免瀏覽器重複解壓縮。開發迭代可用 `./scripts/build-web.ps1 -Dev`。
+
+## GitHub 自動部署
+
+Cloudflare Pages 的 Git 專案 `latch-liam652-git` 連接 `liam8846/latch`，正式分支為 `master`。建置命令為 `bash scripts/build-pages.sh`，輸出目錄為 `dist`。每次推送至 `master` 都會由 Cloudflare 取得該 commit 並重新建置。
+
+Linux 建置腳本使用固定 Rust `1.99.1` 與官方預編譯 `wasm-bindgen 0.2.130`，下載後檢查 SHA-256 與版本。它保留與本機 PowerShell 相同的 WASM gzip 交付方式。建置失敗或壓縮產物超過 25 MiB 時，腳本以錯誤結束。
+
+正式網域只在 Git 建置與瀏覽器驗證成功後綁定此專案。Pages 單次建置有 20 分鐘上限，不能假設它會快取 Cargo 的相依套件與編譯產物。
 
 ## 操作
 
