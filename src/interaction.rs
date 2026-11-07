@@ -1,10 +1,13 @@
 use crate::{
     Screen, Session,
-    bridge::Command,
     player::{Player, START, Solid},
+    session::{SoundCue, UiCommand, UiCommands},
 };
 use bevy::prelude::*;
-use latch::puzzle::{Action, Progress, Reply, parse_code};
+use latch::{
+    i18n::MessageKey,
+    puzzle::{Action, Progress, Reply},
+};
 
 #[derive(Clone, Copy, Component, PartialEq, Eq)]
 pub enum Target {
@@ -17,15 +20,15 @@ pub enum Target {
 impl Target {
     #[cfg(target_arch = "wasm32")]
     /// 提供準星對準物件時的可執行動作文字。
-    pub fn label(self, progress: Progress) -> &'static str {
+    pub fn label(self, progress: Progress) -> MessageKey {
         match self {
-            Self::Note => "閱讀便箋",
-            Self::Safe if progress == Progress::SafeOpen => "拿取黃銅鑰匙",
-            Self::Safe if progress.safe_is_open() => "查看保險箱",
-            Self::Safe => "輸入保險箱密碼",
-            Self::Door if progress.door_is_open() => "走出房間",
-            Self::Door => "開啟房門",
-            Self::Painting => "查看畫作",
+            Self::Note => MessageKey::ReadNote,
+            Self::Safe if progress == Progress::SafeOpen => MessageKey::TakeKey,
+            Self::Safe if progress.safe_is_open() => MessageKey::ViewSafe,
+            Self::Safe => MessageKey::EnterCode,
+            Self::Door if progress.door_is_open() => MessageKey::LeaveRoom,
+            Self::Door => MessageKey::OpenDoor,
+            Self::Painting => MessageKey::ViewPainting,
         }
     }
 }
@@ -66,74 +69,82 @@ pub fn focus_target(
     }
 }
 
-/// 在 Rust 中處理 UI 命令與場景互動；瀏覽器只傳送動作，不能直接設定進度。
+/// 依序處理型別化命令；只有 Session 擁有謎題與畫面狀態。
 pub fn act(
-    mut command: ResMut<Command>,
+    mut commands: ResMut<UiCommands>,
     mut session: ResMut<Session>,
     focus: Res<Focus>,
     keys: Res<ButtonInput<KeyCode>>,
     mut player: Query<(&mut Transform, &mut Player)>,
 ) {
-    let input = std::mem::take(&mut command.0);
-    if input == "restart" {
-        session.progress.apply(Action::Restart);
-        session.screen = Screen::Playing;
-        session.notify("午夜書房，再一次。", "start");
-        if let Ok((mut transform, mut look)) = player.single_mut() {
-            transform.translation = START;
-            look.yaw = 0.0;
-            look.pitch = -0.08;
+    if keys.just_pressed(KeyCode::Escape) {
+        commands.0.push_back(UiCommand::Pause);
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    if keys.just_pressed(KeyCode::Enter) {
+        match session.screen {
+            Screen::Intro => commands.0.push_back(UiCommand::Begin),
+            Screen::Paused => commands.0.push_back(UiCommand::Resume),
+            _ => {}
         }
-        return;
     }
-    if input == "pause" || keys.just_pressed(KeyCode::Escape) {
-        if session.screen != Screen::Intro && session.screen != Screen::Won {
-            session.screen = Screen::Paused;
-        }
-        return;
+    if keys.just_pressed(KeyCode::KeyE) {
+        commands.0.push_back(UiCommand::Interact);
     }
-    if input == "begin"
-        || input == "resume"
-        || input == "close"
-        || (keys.just_pressed(KeyCode::Enter)
-            && matches!(session.screen, Screen::Intro | Screen::Paused))
-    {
-        session.screen = Screen::Playing;
-        return;
-    }
-    if let Some(code) = input.strip_prefix("code:") {
-        if session.screen == Screen::Safe {
-            match parse_code(code).map(|code| session.progress.apply(Action::EnterCode(code))) {
-                Some(Reply::SafeUnlocked) => {
-                    session.screen = Screen::Playing;
-                    session.notify("喀。保險箱的鎖鬆開了。", "unlock");
+    while let Some(command) = commands.0.pop_front() {
+        match command {
+            UiCommand::Failure => session.screen = Screen::Paused,
+            UiCommand::Restart => {
+                session.progress.apply(Action::Restart);
+                session.screen = Screen::Playing;
+                session.notify(MessageKey::Restarted, SoundCue::Start);
+                if let Ok((mut transform, mut look)) = player.single_mut() {
+                    transform.translation = START;
+                    look.yaw = 0.0;
+                    look.pitch = -0.08;
                 }
-                _ => session.notify("密碼不正確。再看看那張便箋。", "wrong"),
             }
+            UiCommand::Pause if !matches!(session.screen, Screen::Intro | Screen::Won) => {
+                session.screen = Screen::Paused;
+            }
+            UiCommand::Begin | UiCommand::Resume | UiCommand::Close => {
+                session.screen = Screen::Playing;
+            }
+            UiCommand::SubmitCode(code) if session.screen == Screen::Safe => {
+                match code.map(|code| session.progress.apply(Action::EnterCode(code))) {
+                    Some(Reply::SafeUnlocked) => {
+                        session.screen = Screen::Playing;
+                        session.notify(MessageKey::SafeUnlocked, SoundCue::Unlock);
+                    }
+                    _ => session.notify(MessageKey::IncorrectCode, SoundCue::Wrong),
+                }
+            }
+            UiCommand::Interact if session.screen == Screen::Playing => {
+                interact(&mut session, focus.0);
+            }
+            _ => {}
         }
-        return;
     }
-    if session.screen != Screen::Playing
-        || !(input == "interact" || keys.just_pressed(KeyCode::KeyE))
-    {
-        return;
-    }
-    match focus.0 {
+}
+
+/// 將目前準星目標套用為遊戲動作；重複互動由 reducer 的進度處理。
+fn interact(session: &mut Session, target: Option<Target>) {
+    match target {
         Some(Target::Note) => session.screen = Screen::Note,
         Some(Target::Safe) if session.progress == Progress::Searching => {
             session.screen = Screen::Safe
         }
         Some(Target::Safe) if session.progress == Progress::SafeOpen => {
             session.progress.apply(Action::TakeKey);
-            session.notify("已取得黃銅鑰匙。房門在你的身後。", "key");
+            session.notify(MessageKey::KeyTaken, SoundCue::Key);
         }
-        Some(Target::Safe) => session.notify("裡面已經空了。", "tap"),
+        Some(Target::Safe) => session.notify(MessageKey::EmptySafe, SoundCue::Tap),
         Some(Target::Door) => match session.progress.apply(Action::UnlockDoor) {
-            Reply::DoorUnlocked => session.notify("鑰匙轉動。走進門外的光裡。", "unlock"),
-            Reply::NeedKey => session.notify("門鎖住了。需要一把黃銅鑰匙。", "wrong"),
-            _ => session.notify("門已打開，向前走。", "tap"),
+            Reply::DoorUnlocked => session.notify(MessageKey::DoorUnlocked, SoundCue::Unlock),
+            Reply::NeedKey => session.notify(MessageKey::NeedKey, SoundCue::Wrong),
+            _ => session.notify(MessageKey::DoorAlreadyOpen, SoundCue::Tap),
         },
-        Some(Target::Painting) => session.notify("《午夜之後》。畫框背面沒有藏東西。", "tap"),
+        Some(Target::Painting) => session.notify(MessageKey::Painting, SoundCue::Tap),
         None => {}
     }
 }

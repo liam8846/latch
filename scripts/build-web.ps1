@@ -19,9 +19,17 @@ try {
     $wasmPath = Join-Path $targetDirectory "wasm32-unknown-unknown/$profileDirectory/latch.wasm"
     $dist = Join-Path $projectRoot 'dist'
     New-Item -ItemType Directory -Path (Join-Path $dist 'pkg') -Force | Out-Null
+    $legacyScript = [IO.Path]::GetFullPath((Join-Path $dist 'app.js'))
+    $resolvedDist = [IO.Path]::GetFullPath($dist)
+    if (-not $legacyScript.StartsWith($resolvedDist + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+        throw '舊版啟動檔清理路徑超出 dist。'
+    }
+    if (Test-Path -LiteralPath $legacyScript -PathType Leaf) { Remove-Item -LiteralPath $legacyScript }
+
     & wasm-bindgen --target web --no-typescript --out-dir (Join-Path $dist 'pkg') $wasmPath
     if ($LASTEXITCODE -ne 0) { throw 'wasm-bindgen 匯出失敗。' }
-    Copy-Item -LiteralPath 'index.html', 'style.css', 'app.js' -Destination $dist -Force
+    Copy-Item -LiteralPath 'index.html', 'style.css', 'bootstrap.js' -Destination $dist -Force
+    Copy-Item -LiteralPath 'assets' -Destination $dist -Recurse -Force
     $artifact = Get-Item -LiteralPath (Join-Path $dist 'pkg/latch_bg.wasm')
     $gzipPath = Join-Path $dist 'pkg/latch_bg.wasm.gz'
     $inputStream = [IO.File]::OpenRead($artifact.FullName)

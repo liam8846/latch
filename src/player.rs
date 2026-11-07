@@ -1,6 +1,10 @@
+use crate::session::SoundCue;
 use crate::{Screen, Session, bridge};
 use bevy::{input::mouse::AccumulatedMouseMotion, prelude::*};
-use latch::puzzle::{Action, Progress};
+use latch::{
+    i18n::MessageKey,
+    puzzle::{Action, Progress},
+};
 
 pub const START: Vec3 = Vec3::new(0.0, 1.65, 2.8);
 
@@ -78,11 +82,11 @@ pub fn move_player(
     let Ok((mut transform, mut look)) = player.single_mut() else {
         return;
     };
-    let focused = windows.single().is_ok_and(|window| window.focused);
+    let focused = bridge::window_focused(windows.single().is_ok_and(|window| window.focused));
     if !focused && session.screen == Screen::Playing {
         session.screen = Screen::Paused;
     }
-    if session.screen != Screen::Playing {
+    if session.screen != Screen::Playing || !bridge::input_focused() {
         keys.reset_all();
         return;
     }
@@ -120,7 +124,7 @@ pub fn move_player(
     if session.progress == Progress::DoorOpen && transform.translation.z > 5.65 {
         session.progress.apply(Action::Leave);
         session.screen = Screen::Won;
-        session.notify("門外的空氣，終於不再靜止。", "win");
+        session.notify(MessageKey::Escaped, SoundCue::Win);
     }
 }
 

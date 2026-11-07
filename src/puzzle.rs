@@ -48,17 +48,6 @@ impl Progress {
         reply
     }
 
-    /// 回傳目前唯一有效的下一個目標。
-    pub fn objective(self) -> &'static str {
-        match self {
-            Self::Searching => "找到書桌上的便箋，解開保險箱",
-            Self::SafeOpen => "保險箱已開啟，取走裡面的鑰匙",
-            Self::KeyHeld => "使用黃銅鑰匙打開房門",
-            Self::DoorOpen => "門已開啟，走進光裡",
-            Self::Escaped => "你找回了離開的方式",
-        }
-    }
-
     /// 表示保險箱門已解鎖，供場景動畫取用。
     pub fn safe_is_open(self) -> bool {
         self != Self::Searching
@@ -157,7 +146,7 @@ mod tests {
     }
 
     #[test]
-    fn visual_state_and_objectives_match_each_stage() {
+    fn visual_state_matches_each_stage() {
         for progress in [
             Progress::Searching,
             Progress::SafeOpen,
@@ -165,7 +154,6 @@ mod tests {
             Progress::DoorOpen,
             Progress::Escaped,
         ] {
-            assert!(!progress.objective().is_empty());
             assert_eq!(progress.safe_is_open(), progress != Progress::Searching);
             assert_eq!(
                 progress.door_is_open(),

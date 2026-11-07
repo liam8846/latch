@@ -7,6 +7,7 @@
 - 部署目標為 Cloudflare Pages，使用既有 Cloudflare 網域。單人遊戲優先採靜態部署；只有功能確實需要時才加入後端。
 - 目前專案使用 Rust 2024 edition、Bevy 0.20.1 與 WebGPU，透過 `scripts/build-web.ps1` 產生靜態網頁。實作前先確認檔案現況，不要假設規劃中的功能已存在。
 - 與使用者溝通及撰寫專案說明以繁體中文為主；程式識別字使用清楚的英文。
+- 保留 HTML/CSS 排版，遊戲互動、DOM、音效與翻譯皆由 Rust 負責。JavaScript 限於啟動前 WebGPU 偵測、下載與解壓、WASM 初始化，以及工具產生的膠水。翻譯使用 `assets/locales/` 的 Fluent 資源，語言切換不得修改遊戲 Session 或清除玩家輸入。
 
 ## Safe Rust 與型別
 
