@@ -5,7 +5,7 @@
 - Latch 是以 Rust、Bevy 與 WebGPU 製作的 3D 密室逃脫網頁遊戲。
 - 瀏覽器是主要交付平台，編譯目標為 `wasm32-unknown-unknown`；Windows 原生執行可用於開發，但不能取代瀏覽器驗證。
 - 部署目標為 Cloudflare Pages，使用既有 Cloudflare 網域。單人遊戲優先採靜態部署；只有功能確實需要時才加入後端。
-- 目前專案是 Rust 2024 edition 的 Cargo binary scaffold，尚未加入 Bevy 或網頁建置設定。實作前先確認檔案現況，不要假設規劃中的功能已存在。
+- 目前專案使用 Rust 2024 edition、Bevy 0.20.1 與 WebGPU，透過 `scripts/build-web.ps1` 產生靜態網頁。實作前先確認檔案現況，不要假設規劃中的功能已存在。
 - 與使用者溝通及撰寫專案說明以繁體中文為主；程式識別字使用清楚的英文。
 
 ## Safe Rust 與型別

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101c1d">
+  <meta name="description" content="Latch 午夜書房，一段關於觀察與離開的 3D 密室逃脫。">
+  <title>Latch · 午夜書房</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="room-view"><canvas id="game" tabindex="0" aria-label="午夜書房 3D 第一人稱場景，WASD 移動，方向鍵轉動視角，E 互動"></canvas></main>
+  <div class="vignette" aria-hidden="true"></div>
+  <div id="interface" data-screen="loading">
+    <header class="masthead">
+      <a class="wordmark" href="./" aria-label="Latch 首頁">LATCH<span class="mark">⌑</span></a>
+      <div class="chapter"><span class="tiny">AN ESCAPE ROOM EXPERIENCE</span><span>第一章 <i>／</i> 午夜書房</span></div>
+      <div class="header-actions"><button id="sound" class="quiet" aria-pressed="false" aria-label="啟用音效">音效 關</button><button id="pause" class="quiet" aria-label="暫停遊戲">暫停 <kbd>Esc</kbd></button></div>
+    </header>
+    <div id="loading" class="loading"><span class="loader"></span><p>點亮書房中的最後一盞燈</p><small id="load-detail">正在載入 3D 場景</small></div>
+    <section id="error" class="error panel" hidden aria-live="assertive"><span class="eyebrow">無法進入書房</span><h1>這盞燈還沒有亮起。</h1><p id="error-message"></p><button onclick="location.reload()" class="primary">重新載入 <span>↻</span></button></section>
+    <div id="hud" hidden>
+      <aside class="objective"><span class="eyebrow">目前目標</span><p id="objective"></p></aside>
+      <div class="crosshair" aria-hidden="true"><span></span></div>
+      <button id="interact" class="interaction" hidden><kbd>E</kbd><span id="target"></span><span class="small-arrow">↗</span></button>
+      <div class="inventory"><span class="key-icon" aria-hidden="true">⚿</span><div><span class="eyebrow">隨身物品</span><p id="inventory"></p></div></div>
+      <div class="controls"><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 移動</span><span>滑鼠 / 方向鍵 環顧</span><span><kbd>E</kbd> 互動</span></div>
+      <p id="toast" class="toast" role="status"></p>
+      <div class="scene-caption"><span>THE MIDNIGHT STUDY</span><span>00:00 <i>時間停在這一刻</i></span></div>
+    </div>
+    <div id="shade" hidden></div>
+    <section id="intro" class="intro panel" hidden aria-labelledby="intro-title">
+      <div class="chapter-number">01 <span>THE MIDNIGHT STUDY</span></div>
+      <span class="eyebrow">一個房間。一道未完的告別。</span>
+      <h1 id="intro-title">午夜<span>書房</span><em>The door remembers.</em></h1>
+      <p class="intro-copy">鐘聲停了，燈還亮著。<br>有人留下了一張便箋，<br>也留給你一個離開的機會。</p>
+      <button id="begin" class="primary">走進書房 <span>↗</span></button>
+      <p class="intro-meta">約 3 分鐘 <b>·</b> 觀察、解謎、尋找出口</p>
+      <div class="intro-controls"><span><kbd>WASD</kbd> 移動</span><span><kbd>滑鼠</kbd> 環顧</span><span><kbd>E</kbd> 互動</span></div>
+      <p class="alternate">也可用方向鍵環顧；Esc 隨時暫停。</p>
+    </section>
+    <section id="paused" class="dialog panel" hidden aria-labelledby="pause-title"><span class="eyebrow">TAKE YOUR TIME</span><h2 id="pause-title">書房，等你回來。</h2><p>慢慢看。每一個線索都在原處。</p><button id="resume" class="primary">繼續探索 <span>↗</span></button><button data-command="restart" class="secondary">重新開始</button></section>
+    <section id="note" class="dialog note-paper" hidden aria-labelledby="note-title">
+      <span class="eyebrow">桌上的便箋</span><button data-command="close" class="close" aria-label="收起便箋">×</button><h2 id="note-title">留給最後離開的人</h2>
+      <p>「保險箱的密碼，<br>是我們第一次在這裡相遇的年份。」</p><div class="handwriting">那年夏天，1947。</div><p class="signature">別忘了帶走鑰匙。<br><span>—— M.</span></p><div class="paper-footer">書房裡，總有些事值得記住。</div><button data-command="close" class="paper-button">收起便箋 <span>↗</span></button>
+    </section>
+    <section id="safe" class="dialog panel safe-panel" hidden aria-labelledby="safe-title">
+      <button data-command="close" class="close" aria-label="離開保險箱">×</button><span class="eyebrow">BRASS & MEMORY · No. 047</span><h2 id="safe-title">四位數的回憶</h2><p>輸入保險箱的四位數密碼。</p><form id="code-form"><label class="sr-only" for="code">四位數密碼</label><input id="code" name="code" type="text" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off" placeholder="····" required aria-describedby="safe-message"><p id="safe-message" role="status">線索也許就在書桌上。</p><button type="submit" class="primary">轉動鎖栓 <span>↗</span></button></form>
+    </section>
+    <section id="won" class="dialog panel win-panel" hidden aria-labelledby="win-title"><span class="eyebrow">CHAPTER COMPLETE</span><div class="win-symbol">⌑</div><h2 id="win-title">有些門，<br>為記得的人而開。</h2><p>你離開了午夜書房。<br>而那盞燈，會替下一個人留下。</p><button data-command="restart" class="primary">再回書房 <span>↻</span></button><small>LATCH · 第一章完</small></section>
+    <footer class="edition">LATCH <span>／</span> AN ORIGINAL ROOM <span>·</span> 2026</footer>
+  </div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
