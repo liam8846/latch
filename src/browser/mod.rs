@@ -5,7 +5,7 @@ mod events;
 use crate::{
     interaction::Focus,
     player::Player,
-    session::{Screen, Session, UiCommand, UiCommands},
+    session::{Exhibit, Screen, Session, UiCommand, UiCommands},
 };
 use audio::Audio;
 use bevy::prelude::*;
@@ -122,10 +122,11 @@ impl BrowserUi {
             return;
         }
         self.screen.set(session.screen);
+        self.audio.borrow_mut().update(session);
         let screen = session.screen.id();
         attribute(&self.dom.root, "data-screen", screen);
         self.dom.hidden("loading", true);
-        for name in ["intro", "paused", "note", "safe", "won"] {
+        for name in ["intro", "paused", "inspect", "safe", "won"] {
             self.dom.hidden(name, name != screen);
         }
         self.dom.hidden("shade", session.screen == Screen::Playing);
@@ -139,7 +140,7 @@ impl BrowserUi {
             self.last_revision = session.revision;
             if let Some(notice) = session.notice {
                 self.toast = Some((notice.message, now + 5.5));
-                self.audio.borrow().cue(notice.sound);
+                self.audio.borrow_mut().cue(notice.sound);
                 if session.screen == Screen::Safe {
                     self.safe_message = notice.message;
                     let _ = self.dom.code.focus();
@@ -176,6 +177,7 @@ impl BrowserUi {
             .unwrap_or_default();
         self.dom.text("target", &target);
         self.dom.hidden("interact", target.is_empty());
+        self.render_inspect(session);
         self.render_sound();
         attribute(
             &self.dom.root,
@@ -204,6 +206,30 @@ impl BrowserUi {
         }
     }
 
+    /// 共用閱讀面板從型別化展品導出，語言切換不改變焦點。
+    fn render_inspect(&self, session: &Session) {
+        let Screen::Inspect(exhibit) = session.screen else {
+            return;
+        };
+        let prefix = match exhibit {
+            Exhibit::Note => "note",
+            Exhibit::Photograph => "photograph",
+            Exhibit::Letter => "letter",
+        };
+        for part in ["title", "eyebrow", "copy", "caption"] {
+            self.dom.text(
+                &format!("inspect-{part}"),
+                &self.localizer.text(&format!("{prefix}-{part}"), None),
+            );
+        }
+        attribute(self.dom.get("inspect"), "data-exhibit", prefix);
+        self.dom
+            .hidden("inspect-image", exhibit != Exhibit::Photograph);
+        let take = exhibit == Exhibit::Letter && session.progress == Progress::SafeOpen;
+        self.dom.hidden("take-key", !take);
+        self.dom.hidden("close-inspect-footer", take);
+    }
+
     /// 只在真正畫面轉換時移動焦點與清空新開啟的密碼欄。
     fn enter_screen(&mut self, screen: Screen) {
         if screen != Screen::Playing && self.dom.document.pointer_lock_element().is_some() {
@@ -213,7 +239,7 @@ impl BrowserUi {
             Screen::Playing => Some(&self.dom.canvas),
             Screen::Intro => Some(self.dom.get("begin")),
             Screen::Paused => Some(self.dom.get("resume")),
-            Screen::Note => Some(self.dom.get("close-note")),
+            Screen::Inspect(_) => Some(self.dom.get("close-inspect")),
             Screen::Won => Some(self.dom.get("restart-won")),
             Screen::Safe => {
                 self.dom.code.set_value("");
@@ -225,12 +251,11 @@ impl BrowserUi {
         if let Some(element) = focus {
             let _ = element.focus();
         }
-        self.audio.borrow().ambience(screen == Screen::Playing);
     }
 
     /// 音訊啟用狀態由手勢 callback 擁有，按鈕文案在目前語言格式化。
     fn render_sound(&self) {
-        let enabled = self.audio.borrow().enabled;
+        let enabled = self.audio.borrow().enabled();
         let key = if enabled { "sound-on" } else { "sound-off" };
         self.dom.text("sound", &self.localizer.text(key, None));
         attribute(

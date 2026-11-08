@@ -1,13 +1,20 @@
 use bevy::prelude::*;
 use latch::{i18n::MessageKey, puzzle::Progress};
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Exhibit {
+    Note,
+    Photograph,
+    Letter,
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Screen {
     #[default]
     Intro,
     Playing,
     Paused,
-    Note,
+    Inspect(Exhibit),
     Safe,
     Won,
 }
@@ -19,7 +26,7 @@ impl Screen {
             Self::Intro => "intro",
             Self::Playing => "playing",
             Self::Paused => "paused",
-            Self::Note => "note",
+            Self::Inspect(_) => "inspect",
             Self::Safe => "safe",
             Self::Won => "won",
         }
@@ -52,6 +59,15 @@ pub struct Session {
 }
 
 impl Session {
+    /// 只有閱讀已開啟保險箱的信時可領取鑰匙；重複命令不改變狀態。
+    pub fn take_key(&mut self) {
+        if self.screen == Screen::Inspect(Exhibit::Letter) && self.progress == Progress::SafeOpen {
+            self.progress.apply(latch::puzzle::Action::TakeKey);
+            self.screen = Screen::Playing;
+            self.notify(MessageKey::KeyTaken, SoundCue::Key);
+        }
+    }
+
     /// 更新型別化提示與事件序號，重複提示仍會觸發新的音效。
     pub fn notify(&mut self, message: MessageKey, sound: SoundCue) {
         self.notice = Some(Notice { message, sound });
@@ -68,8 +84,46 @@ pub enum UiCommand {
     Restart,
     Interact,
     SubmitCode(Option<[u8; 4]>),
+    TakeKey,
     Failure,
 }
 
 #[derive(Resource, Default)]
 pub struct UiCommands(pub std::collections::VecDeque<UiCommand>);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn key_requires_open_safe_and_letter_and_cannot_repeat() {
+        for screen in [
+            Screen::Playing,
+            Screen::Safe,
+            Screen::Inspect(Exhibit::Note),
+            Screen::Inspect(Exhibit::Photograph),
+        ] {
+            let mut session = Session {
+                screen,
+                progress: Progress::SafeOpen,
+                ..Default::default()
+            };
+            session.take_key();
+            assert_eq!(session.progress, Progress::SafeOpen);
+            assert_eq!(session.revision, 0);
+        }
+        let mut session = Session {
+            screen: Screen::Inspect(Exhibit::Letter),
+            ..Default::default()
+        };
+        session.take_key();
+        assert_eq!(session.progress, Progress::Searching);
+        session.progress = Progress::SafeOpen;
+        session.take_key();
+        assert_eq!(session.progress, Progress::KeyHeld);
+        assert_eq!(session.screen, Screen::Playing);
+        assert_eq!(session.revision, 1);
+        session.screen = Screen::Inspect(Exhibit::Letter);
+        session.take_key();
+        assert_eq!(session.revision, 1);
+    }
+}

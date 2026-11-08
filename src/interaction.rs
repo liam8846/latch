@@ -1,7 +1,7 @@
 use crate::{
     Screen, Session,
     player::{Player, START, Solid},
-    session::{SoundCue, UiCommand, UiCommands},
+    session::{Exhibit, SoundCue, UiCommand, UiCommands},
 };
 use bevy::prelude::*;
 use latch::{
@@ -14,7 +14,7 @@ pub enum Target {
     Note,
     Safe,
     Door,
-    Painting,
+    Photograph,
 }
 
 impl Target {
@@ -23,12 +23,12 @@ impl Target {
     pub fn label(self, progress: Progress) -> MessageKey {
         match self {
             Self::Note => MessageKey::ReadNote,
-            Self::Safe if progress == Progress::SafeOpen => MessageKey::TakeKey,
+            Self::Safe if progress == Progress::SafeOpen => MessageKey::ReadLetter,
             Self::Safe if progress.safe_is_open() => MessageKey::ViewSafe,
             Self::Safe => MessageKey::EnterCode,
             Self::Door if progress.door_is_open() => MessageKey::LeaveRoom,
             Self::Door => MessageKey::OpenDoor,
-            Self::Painting => MessageKey::ViewPainting,
+            Self::Photograph => MessageKey::ViewPhotograph,
         }
     }
 }
@@ -93,6 +93,7 @@ pub fn act(
     }
     while let Some(command) = commands.0.pop_front() {
         match command {
+            UiCommand::TakeKey => session.take_key(),
             UiCommand::Failure => session.screen = Screen::Paused,
             UiCommand::Restart => {
                 session.progress.apply(Action::Restart);
@@ -130,21 +131,17 @@ pub fn act(
 /// 將目前準星目標套用為遊戲動作；重複互動由 reducer 的進度處理。
 fn interact(session: &mut Session, target: Option<Target>) {
     match target {
-        Some(Target::Note) => session.screen = Screen::Note,
+        Some(Target::Note) => session.screen = Screen::Inspect(Exhibit::Note),
         Some(Target::Safe) if session.progress == Progress::Searching => {
             session.screen = Screen::Safe
         }
-        Some(Target::Safe) if session.progress == Progress::SafeOpen => {
-            session.progress.apply(Action::TakeKey);
-            session.notify(MessageKey::KeyTaken, SoundCue::Key);
-        }
-        Some(Target::Safe) => session.notify(MessageKey::EmptySafe, SoundCue::Tap),
+        Some(Target::Safe) => session.screen = Screen::Inspect(Exhibit::Letter),
         Some(Target::Door) => match session.progress.apply(Action::UnlockDoor) {
             Reply::DoorUnlocked => session.notify(MessageKey::DoorUnlocked, SoundCue::Unlock),
             Reply::NeedKey => session.notify(MessageKey::NeedKey, SoundCue::Wrong),
             _ => session.notify(MessageKey::DoorAlreadyOpen, SoundCue::Tap),
         },
-        Some(Target::Painting) => session.notify(MessageKey::Painting, SoundCue::Tap),
+        Some(Target::Photograph) => session.screen = Screen::Inspect(Exhibit::Photograph),
         None => {}
     }
 }

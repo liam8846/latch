@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bevy = { version = "=0.20.1", default-features = false, features = ["std", "async_executor", "bevy_asset", "bevy_log", "bevy_winit", "bevy_camera", "bevy_color", "bevy_image", "bevy_mesh", "bevy_shader", "bevy_render", "bevy_core_pipeline", "bevy_light", "bevy_pbr", "bevy_window", "tonemapping_luts", "webgpu", "png", "keyboard", "mouse", "zstd_rust"] }
+bevy = { version = "=0.20.1", default-features = false, features = ["std", "async_executor", "bevy_asset", "bevy_log", "bevy_winit", "bevy_camera", "bevy_color", "bevy_image", "bevy_mesh", "bevy_shader", "bevy_render", "bevy_core_pipeline", "bevy_light", "bevy_pbr", "bevy_window", "tonemapping_luts", "webgpu", "png", "jpeg", "keyboard", "mouse", "zstd_rust"] }
 
 fluent-bundle = "=0.16.0"
 unic-langid = "=0.9.6"
@@ -13,7 +13,7 @@ unic-langid = "=0.9.6"
 js-sys = "=0.3.107"
 wasm-bindgen = "=0.2.130"
 wasm-bindgen-futures = "=0.4.80"
-web-sys = { version = "=0.3.107", features = ["Window", "Document", "Element", "HtmlElement", "HtmlInputElement", "HtmlSelectElement", "HtmlCanvasElement", "Event", "EventTarget", "KeyboardEvent", "ErrorEvent", "NodeList", "AudioContext", "AudioDestinationNode", "AudioNode", "AudioParam", "GainNode", "OscillatorNode", "OscillatorType", "BaseAudioContext", "console"] }
+web-sys = { version = "=0.3.107", features = ["Window", "Document", "Element", "HtmlElement", "HtmlInputElement", "HtmlSelectElement", "HtmlCanvasElement", "Event", "EventTarget", "KeyboardEvent", "ErrorEvent", "NodeList", "AudioContext", "AudioContextState", "AudioDestinationNode", "AudioNode", "AudioParam", "GainNode", "OscillatorNode", "OscillatorType", "BaseAudioContext", "console"] }
 
 [profile.dev]
 opt-level = 1

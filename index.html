@@ -42,10 +42,12 @@
       <p class="alternate" data-l10n="alternate-controls">也可用方向鍵環顧；Esc 隨時暫停。</p>
     </section>
     <section id="paused" class="dialog panel" hidden role="dialog" aria-modal="true" aria-labelledby="pause-title"><span class="eyebrow" data-l10n="pause-eyebrow">TAKE YOUR TIME</span><h2 id="pause-title" data-l10n="pause-title">書房，等你回來。</h2><p data-l10n="pause-copy">慢慢看。每一個線索都在原處。</p><button id="resume" class="primary"><span data-l10n="resume">繼續探索</span> <span>↗</span></button><button id="restart-paused" class="secondary" data-l10n="restart">重新開始</button></section>
-    <section id="note" class="dialog note-paper" hidden role="dialog" aria-modal="true" aria-labelledby="note-title">
-      <span class="eyebrow" data-l10n="note-eyebrow">桌上的便箋</span><button id="close-note" class="close" data-l10n-aria="note-close" aria-label="收起便箋">×</button><h2 id="note-title" data-l10n="note-title">留給最後離開的人</h2>
-      <p class="multiline" data-l10n="note-copy">「保險箱的密碼，
-是我們第一次在這裡相遇的年份。」</p><div class="handwriting" data-l10n="note-year">那年夏天，1947。</div><p class="signature"><span class="signature-copy" data-l10n="note-signature">別忘了帶走鑰匙。</span><span data-l10n="note-author">—— M.</span></p><div class="paper-footer" data-l10n="note-footer">書房裡，總有些事值得記住。</div><button id="close-note-footer" class="paper-button"><span data-l10n="note-close">收起便箋</span> <span>↗</span></button>
+    <section id="inspect" class="dialog note-paper" hidden role="dialog" aria-modal="true" aria-labelledby="inspect-title">
+      <span id="inspect-eyebrow" class="eyebrow"></span><button id="close-inspect" class="close" data-l10n-aria="inspect-close" aria-label="收起">×</button>
+      <h2 id="inspect-title"></h2><img id="inspect-image" src="assets/artwork/seaside-station-memory.jpg" alt="" hidden>
+      <p id="inspect-copy" class="multiline"></p><div id="inspect-caption" class="paper-footer multiline"></div>
+      <button id="take-key" class="paper-button" data-l10n="letter-take" hidden></button>
+      <button id="close-inspect-footer" class="paper-button" data-l10n="inspect-close"></button>
     </section>
     <section id="safe" class="dialog panel safe-panel" hidden role="dialog" aria-modal="true" aria-labelledby="safe-title">
       <button id="close-safe" class="close" data-l10n-aria="safe-close" aria-label="離開保險箱">×</button><span class="eyebrow" data-l10n="safe-eyebrow">BRASS & MEMORY · No. 047</span><h2 id="safe-title" data-l10n="safe-title">四位數的回憶</h2><p data-l10n="safe-copy">輸入保險箱的四位數密碼。</p><form id="code-form"><label class="sr-only" for="code" data-l10n="code-label">四位數密碼</label><input id="code" name="code" type="text" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off" placeholder="····" required aria-describedby="safe-message"><p id="safe-message" role="status">線索也許就在書桌上。</p><button type="submit" class="primary"><span data-l10n="safe-submit">轉動鎖栓</span> <span>↗</span></button></form>

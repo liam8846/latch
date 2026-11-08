@@ -57,8 +57,9 @@ pub fn bind(
         ("resume", UiCommand::Resume, true),
         ("restart-paused", UiCommand::Restart, true),
         ("restart-won", UiCommand::Restart, true),
-        ("close-note", UiCommand::Close, true),
-        ("close-note-footer", UiCommand::Close, true),
+        ("close-inspect", UiCommand::Close, true),
+        ("close-inspect-footer", UiCommand::Close, true),
+        ("take-key", UiCommand::TakeKey, true),
         ("close-safe", UiCommand::Close, true),
         ("pause", UiCommand::Pause, false),
         ("interact", UiCommand::Interact, false),
@@ -71,11 +72,17 @@ pub fn bind(
             if failed.get() {
                 return;
             }
+            if command == UiCommand::Pause {
+                audio.borrow_mut().silence();
+            }
+            if command == UiCommand::Restart {
+                audio.borrow_mut().restart();
+            }
             if enter {
                 let mut audio = audio.borrow_mut();
                 audio.unlock();
                 if command == UiCommand::Begin {
-                    audio.enabled = true;
+                    audio.begin();
                     audio.cue(SoundCue::Begin);
                 }
                 drop(audio);
@@ -93,9 +100,9 @@ pub fn bind(
         let canvas = dom.canvas.clone();
         listeners.push(Listener::new(dom.get("sound"), "click", move |_| {
             let mut audio = audio.borrow_mut();
+            let enabled = !audio.enabled();
             audio.unlock();
-            audio.enabled = !audio.enabled;
-            audio.ambience(screen.get() == Screen::Playing);
+            audio.set_enabled(enabled);
             if screen.get() == Screen::Playing {
                 let _ = canvas.focus();
             }
@@ -163,6 +170,7 @@ pub fn bind(
         let document = dom.document.clone();
         let screen = Rc::clone(&screen);
         let sender = sender.clone();
+        let audio = Rc::clone(&audio);
         let failed = Rc::clone(&failed);
         listeners.push(Listener::new(&dom.document, "keydown", move |event| {
             if failed.get() {
@@ -171,7 +179,8 @@ pub fn bind(
             let Some(key) = event.dyn_ref::<KeyboardEvent>() else {
                 return;
             };
-            if key.code() == "Escape" {
+            if key.code() == "Escape" && !matches!(screen.get(), Screen::Intro | Screen::Won) {
+                audio.borrow_mut().silence();
                 let _ = sender.send(BrowserCommand::Game(UiCommand::Pause));
                 event.prevent_default();
             }
@@ -199,13 +208,15 @@ pub fn bind(
         let screen = Rc::clone(&screen);
         let document = dom.document.clone();
         let sender = sender.clone();
+        let audio = Rc::clone(&audio);
         listeners.push(Listener::new(&target, kind, move |_| {
             let should_pause = match kind {
                 "blur" => true,
                 "visibilitychange" => document.hidden(),
                 _ => document.pointer_lock_element().is_none(),
             };
-            if should_pause && screen.get() == Screen::Playing {
+            if should_pause && (screen.get() == Screen::Playing || kind != "pointerlockchange") {
+                audio.borrow_mut().silence();
                 let _ = sender.send(BrowserCommand::Game(UiCommand::Pause));
             }
             if kind == "blur" && document.pointer_lock_element().is_some() {
@@ -222,10 +233,11 @@ pub fn bind(
         let panel = dom.get("error").clone();
         let message = dom.get("error-message").clone();
         let reload = dom.get("reload").clone();
-        let obscured: Vec<HtmlElement> = ["intro", "paused", "note", "safe", "won", "hud", "pause"]
-            .into_iter()
-            .map(|id| dom.get(id).clone())
-            .collect();
+        let obscured: Vec<HtmlElement> =
+            ["intro", "paused", "inspect", "safe", "won", "hud", "pause"]
+                .into_iter()
+                .map(|id| dom.get(id).clone())
+                .collect();
         listeners.push(Listener::new(&window, "error", move |event| {
             if event.dyn_ref::<web_sys::ErrorEvent>().is_some_and(|error| {
                 !error
@@ -241,7 +253,7 @@ pub fn bind(
                 loading.set_hidden(true);
                 panel.set_hidden(false);
                 message.set_text_content(Some(&failure_message.borrow()));
-                audio.borrow().ambience(false);
+                audio.borrow_mut().silence();
                 if document.pointer_lock_element().is_some() {
                     document.exit_pointer_lock();
                 }
@@ -271,12 +283,12 @@ fn request_lock(canvas: &HtmlElement) {
 fn trap_focus(document: &Document, screen: Screen, key: &KeyboardEvent) {
     if !matches!(
         screen,
-        Screen::Paused | Screen::Note | Screen::Safe | Screen::Won
+        Screen::Paused | Screen::Inspect(_) | Screen::Safe | Screen::Won
     ) {
         return;
     }
     let selector = format!(
-        "#{} button, #{} input, .header-actions button:not([hidden]), .header-actions select",
+        "#{} button:not([hidden]), #{} input, .header-actions button:not([hidden]), .header-actions select",
         screen.id(),
         screen.id()
     );

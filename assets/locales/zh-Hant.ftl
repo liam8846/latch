@@ -33,9 +33,10 @@ intro-eyebrow = 一個房間。一道未完的告別。
 intro-title-first = 午夜
 intro-title-second = 書房
 intro-subtitle = The door remembers.
-intro-copy = 鐘聲停了，燈還亮著。
-    有人留下了一張便箋，
-    也留給你一個離開的機會。
+intro-copy = 你回來收走最後一箱書。
+    M. 說，離開前請把桌上的便箋讀完，
+    再帶走保險箱裡留給你的東西。
+    燈還亮著，兩只杯子仍並排放著。
 begin = 走進書房
 intro-duration = 約 { $minutes } 分鐘
 intro-activities = 觀察、解謎、尋找出口
@@ -46,50 +47,64 @@ pause-copy = 慢慢看。每一個線索都在原處。
 resume = 繼續探索
 restart = 重新開始
 note-eyebrow = 桌上的便箋
-note-close = 收起便箋
-note-title = 留給最後離開的人
-note-copy = 「保險箱的密碼，
-    是我們第一次在這裡相遇的年份。」
-note-year = 那年夏天，1947。
-note-signature = 別忘了帶走鑰匙。
-note-author = —— M.
-note-footer = 書房裡，總有些事值得記住。
+note-title = 你認得這個字跡
+note-copy = 「最後一箱書留在這裡。
+    保險箱的密碼，是我們相遇的年份。
+    如果忘了，就看看西牆的那張照片。」
 safe-close = 離開保險箱
 safe-eyebrow = BRASS & MEMORY · No. 047
 safe-title = 四位數的回憶
 safe-copy = 輸入保險箱的四位數密碼。
 code-label = 四位數密碼
-safe-hint = 線索也許就在書桌上。
+safe-hint = 便箋提起的相遇年份，在西牆照片上。
 safe-submit = 轉動鎖栓
 win-eyebrow = CHAPTER COMPLETE
-win-title = 有些門，
-    為記得的人而開。
-win-copy = 你離開了午夜書房。
-    而那盞燈，會替下一個人留下。
+win-title = 帶走回憶，
+    不必留在從前。
+win-copy = 門外仍是夜色。
+    你把信收進口袋，這次知道要往哪裡走。
 win-restart = 再回書房
 win-footer = LATCH · 第一章完
 edition = AN ORIGINAL ROOM
 notice-restarted = 午夜書房，再一次。
-notice-safe-unlocked = 喀。保險箱的鎖鬆開了。
-notice-incorrect-code = 密碼不正確。再看看那張便箋。
+notice-safe-unlocked = 鎖栓鬆開了。鑰匙旁，是一封沒有寄出的信。
+notice-incorrect-code = 這不是那一年。便箋提過西牆的照片。
 notice-key-taken = 已取得黃銅鑰匙。房門在你的身後。
-notice-empty-safe = 裡面已經空了。
-notice-door-unlocked = 鑰匙轉動。走進門外的光裡。
+notice-door-unlocked = 鑰匙轉動。門外的夜風正在等你。
 notice-need-key = 門鎖住了。需要一把黃銅鑰匙。
 notice-door-open = 門已打開，向前走。
-notice-painting = 《午夜之後》。畫框背面沒有藏東西。
 notice-escaped = 門外的空氣，終於不再靜止。
-objective-search = 找到書桌上的便箋，解開保險箱
-objective-safe = 保險箱已開啟，取走裡面的鑰匙
+objective-search = 閱讀書桌便箋，在照片中尋找相遇的年份
+objective-safe = 讀完保險箱裡的信，帶走鑰匙
 objective-key = 使用黃銅鑰匙打開房門
-objective-door = 門已開啟，走進光裡
+objective-door = 門已開啟，帶著信走出去
 objective-escaped = 你找回了離開的方式
 target-note = 閱讀便箋
-target-key = 拿取黃銅鑰匙
-target-safe-open = 查看保險箱
+target-safe-open = 重讀那封信
 target-safe = 輸入保險箱密碼
 target-leave = 走出房間
 target-door = 開啟房門
-target-painting = 查看畫作
 inventory-empty = 尚未取得物品
-inventory-key = 黃銅鑰匙
+inventory-key = 黃銅鑰匙 · 一封信
+note-caption = 紙角有一道熟悉的摺痕。
+    —— M.
+inspect-close = 收起，繼續探索
+photograph-eyebrow = 西牆的照片
+photograph-title = 那年，海邊的站台
+photograph-copy = 兩個人，一只行李箱。
+    那時以為，每一次出發都會一起回來。
+photograph-caption = 1947 年夏 · 海邊站台
+    照片背面，是你們一起寫下的日期。
+letter-eyebrow = 保險箱裡 · 未寄出的信
+letter-title = 留著燈的那些夜晚
+letter-copy = 我以為留著燈，
+    你就知道我在等。
+
+    後來才懂，愛也可以是
+    願你走向別處。
+
+    帶上鑰匙，不必再替我守著那個夏天。
+letter-caption = M.
+letter-take = 收好信，拿起鑰匙 ↗
+target-letter = 閱讀未寄出的信
+target-photograph = 端詳站台照片

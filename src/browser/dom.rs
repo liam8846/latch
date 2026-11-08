@@ -29,7 +29,7 @@ impl Dom {
             "reload",
             "intro",
             "paused",
-            "note",
+            "inspect",
             "safe",
             "won",
             "shade",
@@ -44,13 +44,19 @@ impl Dom {
             "resume",
             "restart-paused",
             "restart-won",
-            "close-note",
-            "close-note-footer",
+            "close-inspect",
+            "close-inspect-footer",
             "close-safe",
             "code-form",
             "toast",
             "safe-message",
             "intro-duration",
+            "inspect-title",
+            "inspect-eyebrow",
+            "inspect-copy",
+            "inspect-caption",
+            "inspect-image",
+            "take-key",
         ] {
             elements.insert(id, element(&document, id)?);
         }
@@ -109,7 +115,7 @@ impl Dom {
             let _ = html.set_attribute("lang", localizer.locale().tag());
         }
         let mut args = FluentArgs::new();
-        args.set("minutes", 3);
+        args.set("minutes", 5);
         self.text(
             "intro-duration",
             &localizer.text("intro-duration", Some(&args)),

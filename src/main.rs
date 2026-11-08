@@ -18,7 +18,7 @@ fn main() {
         .insert_resource(ClearColor(Color::srgb(0.025, 0.04, 0.045)))
         .insert_resource(GlobalAmbientLight {
             color: Color::srgb(0.8, 0.88, 0.85),
-            brightness: 180.0,
+            brightness: 75.0,
             ..default()
         })
         .init_resource::<Session>()
