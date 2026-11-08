@@ -49,6 +49,18 @@ try {
         throw 'WASM 清理路徑超出 dist。'
     }
     Remove-Item -LiteralPath $artifact.FullName
+    $versionInput = [IO.MemoryStream]::new()
+    try {
+        foreach ($path in @($gzipPath, (Join-Path $dist 'bootstrap.js'), (Join-Path $dist 'style.css'))) {
+            $bytes = [IO.File]::ReadAllBytes($path)
+            $versionInput.Write($bytes, 0, $bytes.Length)
+        }
+        $version = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($versionInput.ToArray())).ToLowerInvariant()
+    }
+    finally { $versionInput.Dispose() }
+    $htmlPath = Join-Path $dist 'index.html'
+    $html = [IO.File]::ReadAllText($htmlPath).Replace('href="style.css"', "href=`"style.css?v=$version`"").Replace('src="bootstrap.js"', "src=`"bootstrap.js?v=$version`"")
+    [IO.File]::WriteAllText($htmlPath, $html)
     Write-Output ("已建立 dist，WASM 原始大小 {0:N2} MiB，靜態 gzip 交付檔案 {1:N2} MiB。" -f ($artifact.Length / 1MB), ($compressed.Length / 1MB))
 }
 finally { Pop-Location }

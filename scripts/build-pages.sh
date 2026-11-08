@@ -45,4 +45,6 @@ if (( compressed_bytes > 25 * 1024 * 1024 )); then
     exit 1
 fi
 rm -- dist/pkg/latch_bg.wasm
+version="$(cat dist/pkg/latch_bg.wasm.gz bootstrap.js style.css | sha256sum | cut -d ' ' -f 1)"
+sed -i "s|href=\"style.css\"|href=\"style.css?v=$version\"|; s|src=\"bootstrap.js\"|src=\"bootstrap.js?v=$version\"|" dist/index.html
 printf 'Pages output is ready in dist. Compressed WASM size: %s bytes.\n' "$compressed_bytes"
