@@ -97,8 +97,12 @@ pub fn bind(
     {
         let audio = Rc::clone(&audio);
         let screen = Rc::clone(&screen);
+        let failed = Rc::clone(&failed);
         let canvas = dom.canvas.clone();
         listeners.push(Listener::new(dom.get("sound"), "click", move |_| {
+            if failed.get() {
+                return;
+            }
             let mut audio = audio.borrow_mut();
             let enabled = !audio.enabled();
             audio.unlock();
@@ -111,7 +115,11 @@ pub fn bind(
     {
         let language = dom.language.clone();
         let sender = sender.clone();
+        let failed = Rc::clone(&failed);
         listeners.push(Listener::new(&dom.language, "change", move |_| {
+            if failed.get() {
+                return;
+            }
             if let Some(locale) = Locale::parse(&language.value()) {
                 let _ = sender.send(BrowserCommand::Locale(locale));
             }
@@ -227,39 +235,31 @@ pub fn bind(
     {
         let sender = sender.clone();
         let window = web_sys::window().ok_or_else(|| JsValue::from_str("Missing window"))?;
-        let document = dom.document.clone();
-        let root = dom.root.clone();
-        let loading = dom.get("loading").clone();
-        let panel = dom.get("error").clone();
-        let message = dom.get("error-message").clone();
-        let reload = dom.get("reload").clone();
-        let obscured: Vec<HtmlElement> =
-            ["intro", "paused", "inspect", "safe", "won", "hud", "pause"]
-                .into_iter()
-                .map(|id| dom.get(id).clone())
-                .collect();
+        let panel = dom.failure.clone();
         listeners.push(Listener::new(&window, "error", move |event| {
-            if event.dyn_ref::<web_sys::ErrorEvent>().is_some_and(|error| {
-                !error
+            let Some(error) = event.dyn_ref::<web_sys::ErrorEvent>() else {
+                return;
+            };
+            if failed.get()
+                || error
                     .message()
                     .contains("Using exceptions for control flow")
-            }) {
-                failed.set(true);
-                screen.set(Screen::Paused);
-                for element in &obscured {
-                    element.set_hidden(true);
-                }
-                let _ = root.set_attribute("data-screen", Screen::Paused.id());
-                loading.set_hidden(true);
-                panel.set_hidden(false);
-                message.set_text_content(Some(&failure_message.borrow()));
-                audio.borrow_mut().silence();
-                if document.pointer_lock_element().is_some() {
-                    document.exit_pointer_lock();
-                }
-                let _ = reload.focus();
-                let _ = sender.send(BrowserCommand::Failure);
+            {
+                return;
             }
+            let details = format!(
+                "{}\n{}:{}:{}\n{:?}",
+                error.message(),
+                error.filename(),
+                error.lineno(),
+                error.colno(),
+                error.error(),
+            );
+            failed.set(true);
+            screen.set(Screen::Paused);
+            audio.borrow_mut().silence();
+            panel.show(&failure_message.borrow(), Some(&details));
+            let _ = sender.send(BrowserCommand::Failure);
         })?);
     }
     Ok(listeners)

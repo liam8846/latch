@@ -6,6 +6,9 @@ mod player;
 mod room;
 pub mod session;
 
+#[cfg(any(target_arch = "wasm32", test))]
+mod render_failure;
+
 #[cfg(target_arch = "wasm32")]
 mod browser;
 
@@ -14,8 +17,8 @@ use session::{Screen, Session};
 
 /// 啟動實際 Bevy PBR 場景；網頁使用既有 canvas，WebGPU 為唯一繪圖後端。
 fn main() {
-    App::new()
-        .insert_resource(ClearColor(Color::srgb(0.025, 0.04, 0.045)))
+    let mut app = App::new();
+    app.insert_resource(ClearColor(Color::srgb(0.025, 0.04, 0.045)))
         .insert_resource(GlobalAmbientLight {
             color: Color::srgb(0.8, 0.88, 0.85),
             brightness: 75.0,
@@ -53,6 +56,10 @@ fn main() {
                 bridge::publish,
             )
                 .chain(),
-        )
-        .run();
+        );
+    #[cfg(target_arch = "wasm32")]
+    app.insert_resource(bevy::render::error_handler::RenderErrorHandler(
+        render_failure::handle,
+    ));
+    app.run();
 }

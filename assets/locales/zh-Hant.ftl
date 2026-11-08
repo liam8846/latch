@@ -108,3 +108,6 @@ letter-caption = M.
 letter-take = 收好信，拿起鑰匙 ↗
 target-letter = 閱讀未寄出的信
 target-photograph = 端詳站台照片
+
+error-renderer = 繪圖已停止。請重新載入再試一次；若仍失敗，請提供下方的診斷資訊。
+error-diagnostics = 診斷資訊

@@ -114,3 +114,6 @@ letter-caption = M.
 letter-take = Keep the letter and take the key ↗
 target-letter = Read the unsent letter
 target-photograph = Examine the seaside photograph
+
+error-renderer = Rendering stopped. Reload to try again. If this happens again, share the diagnostic details below.
+error-diagnostics = Diagnostic details

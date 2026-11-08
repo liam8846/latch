@@ -1,6 +1,9 @@
 mod audio;
 mod dom;
 mod events;
+mod failure;
+
+pub use failure::renderer_fallback;
 
 use crate::{
     interaction::Focus,
@@ -90,7 +93,9 @@ impl BrowserUi {
                     commands.0.push_back(command)
                 }
                 BrowserCommand::Game(_) => {}
-                BrowserCommand::Locale(locale) if locale != self.localizer.locale() => {
+                BrowserCommand::Locale(locale)
+                    if !self.failed.get() && locale != self.localizer.locale() =>
+                {
                     self.localizer.set_locale(locale);
                     self.dom.translate(&self.localizer);
                     *self.failure_message.borrow_mut() = self.localizer.text("error-runtime", None);
@@ -105,6 +110,17 @@ impl BrowserUi {
         }
     }
 
+    /// 同步顯示 renderer 的原始診斷；即使 AppExit 阻止後續更新仍可讀取。
+    pub fn fail_renderer(&mut self, details: &str) {
+        self.failed.set(true);
+        self.screen.set(Screen::Paused);
+        self.audio.borrow_mut().silence();
+        self.dom
+            .failure
+            .show(&self.localizer.text("error-renderer", None), Some(details));
+        self.render_sound();
+    }
+
     /// 直接呈現唯讀 ECS 資料；now 使用 Bevy 真實經過秒數，語言切換不重設提示期限。
     pub fn render(
         &mut self,
@@ -114,11 +130,6 @@ impl BrowserUi {
         now: f64,
     ) {
         if self.failed.get() {
-            self.dom.hidden("loading", true);
-            self.dom.hidden("error", false);
-            self.dom
-                .text("error-message", &self.localizer.text("error-runtime", None));
-            self.render_sound();
             return;
         }
         self.screen.set(session.screen);

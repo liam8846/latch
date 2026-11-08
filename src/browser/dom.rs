@@ -1,3 +1,4 @@
+use super::failure::FailurePanel;
 use fluent_bundle::FluentArgs;
 use latch::i18n::Localizer;
 use std::collections::BTreeMap;
@@ -10,6 +11,7 @@ pub struct Dom {
     pub canvas: HtmlElement,
     pub code: HtmlInputElement,
     pub language: HtmlSelectElement,
+    pub failure: FailurePanel,
     elements: BTreeMap<&'static str, HtmlElement>,
     translations: Vec<Element>,
 }
@@ -67,6 +69,7 @@ impl Dom {
             .filter_map(|node| node.dyn_into().ok())
             .collect();
         Ok(Self {
+            failure: FailurePanel::new(document.clone()),
             document,
             root,
             canvas,
