@@ -26,3 +26,6 @@ opt-level = "s"
 lto = "thin"
 codegen-units = 1
 strip = "debuginfo"
+
+[patch.crates-io]
+bevy_pbr = { path = "vendor/bevy_pbr" }

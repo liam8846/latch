@@ -1,1 +1,2 @@
 *.sh text eol=lf
+vendor/bevy_pbr/** -text -whitespace
