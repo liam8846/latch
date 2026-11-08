@@ -24,16 +24,23 @@ fn main() {
         .init_resource::<Session>()
         .init_resource::<session::UiCommands>()
         .init_resource::<interaction::Focus>()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "Latch · 午夜書房".into(),
-                canvas: Some("#game".into()),
-                fit_canvas_to_parent: true,
-                prevent_default_event_handling: false,
-                ..default()
-            }),
-            ..default()
-        }))
+        .add_plugins(
+            DefaultPlugins
+                .set(AssetPlugin {
+                    meta_check: bevy::asset::AssetMetaCheck::Never,
+                    ..default()
+                })
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: "Latch · 午夜書房".into(),
+                        canvas: Some("#game".into()),
+                        fit_canvas_to_parent: true,
+                        prevent_default_event_handling: false,
+                        ..default()
+                    }),
+                    ..default()
+                }),
+        )
         .add_systems(Startup, (bridge::setup, room::setup, player::setup))
         .add_systems(
             Update,
