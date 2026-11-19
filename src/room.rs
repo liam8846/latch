@@ -3,10 +3,10 @@ mod details;
 mod furniture;
 mod materials;
 
-use crate::{Session, interaction::Target};
+use crate::{Session, interaction::Target, physics::PressurePlate};
 use bevy::prelude::*;
 use builder::Furnisher;
-use furniture::{chair, desk_drawer, exit, pressure_plate, safe, shelves};
+use furniture::{balance_corner, chair, desk_drawer, exit, safe, shelves};
 use latch::puzzle::Progress;
 
 #[derive(Component)]
@@ -17,6 +17,15 @@ pub enum Hinge {
 
 #[derive(Component)]
 pub struct Key;
+
+#[derive(Component)]
+pub struct BalanceBeam;
+
+#[derive(Component)]
+pub struct BalanceCounterPan {
+    pub low_y: f32,
+    pub high_y: f32,
+}
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum LightKind {
@@ -127,7 +136,7 @@ pub fn setup(
     chair(&mut room, &assets);
     shelves(&mut room, &palette.walnut, &palette.wood, &palette.brass);
     safe(&mut room, &palette.steel, &palette.brass, &palette.ink);
-    pressure_plate(&mut room, &assets, &palette.walnut, &palette.brass);
+    balance_corner(&mut room, &assets, &palette);
     details::photograph(
         &mut room,
         &assets,
@@ -173,13 +182,44 @@ pub fn setup(
     );
 }
 
-/// 以秒步長逼近目標角度；門與鑰匙的呈現完全由唯一謎題進度導出。
+type BalanceAnimateQueries<'w, 's> = (
+    Query<
+        'w,
+        's,
+        (&'static PressurePlate, &'static Transform),
+        (
+            Without<Hinge>,
+            Without<BalanceBeam>,
+            Without<BalanceCounterPan>,
+        ),
+    >,
+    Query<
+        'w,
+        's,
+        &'static mut Transform,
+        (
+            With<BalanceBeam>,
+            Without<Hinge>,
+            Without<BalanceCounterPan>,
+        ),
+    >,
+    Query<
+        'w,
+        's,
+        (&'static BalanceCounterPan, &'static mut Transform),
+        (Without<Hinge>, Without<BalanceBeam>),
+    >,
+);
+
+/// 以秒步長逼近門板角度與天平橫樑傾角；門與鑰匙的呈現完全由唯一謎題進度導出。
 pub fn animate(
     time: Res<Time>,
     session: Res<Session>,
     mut hinges: Query<(&Hinge, &mut Transform)>,
     mut keys: Query<&mut Visibility, With<Key>>,
+    mut balance: BalanceAnimateQueries,
 ) {
+    let dt = time.delta_secs().min(0.1);
     for (hinge, mut transform) in &mut hinges {
         let open = match hinge {
             Hinge::Safe => session.progress.safe_is_open(),
@@ -190,10 +230,19 @@ pub fn animate(
         } else {
             0.0
         };
-        transform.rotation = transform.rotation.slerp(
-            Quat::from_rotation_y(target),
-            1.0 - (-time.delta_secs() * 5.0).exp(),
-        );
+        transform.rotation = transform
+            .rotation
+            .slerp(Quat::from_rotation_y(target), 1.0 - (-dt * 5.0).exp());
+    }
+    let ratio = balance.0.iter().next().map_or(0.0, |(plate, transform)| {
+        ((plate.base_y - transform.translation.y) / plate.travel).clamp(0.0, 1.0)
+    });
+    let tilt = 0.18 + (-0.04 - 0.18) * ratio;
+    for mut transform in &mut balance.1 {
+        transform.rotation = Quat::from_rotation_x(tilt);
+    }
+    for (pan, mut transform) in &mut balance.2 {
+        transform.translation.y = pan.low_y + (pan.high_y - pan.low_y) * ratio;
     }
     for mut visibility in &mut keys {
         *visibility = if session.progress == Progress::SafeOpen {

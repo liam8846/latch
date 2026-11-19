@@ -1,4 +1,4 @@
-use super::{Hinge, Key, builder::Furnisher};
+use super::{BalanceBeam, BalanceCounterPan, Hinge, Key, builder::Furnisher, materials::Palette};
 use crate::{
     interaction::Target,
     physics::{
@@ -206,13 +206,16 @@ pub(super) fn safe(
     room.block([4.36, 2.45, -1.65], [0.12, 0.5, 0.22], brass);
 }
 
-/// 建立東側復古木桌與黃銅配重托盤，透過牆面黃銅連桿視覺連結保險箱暗扣。
-pub(super) fn pressure_plate(
-    room: &mut Furnisher,
-    assets: &AssetServer,
-    walnut: &Handle<StandardMaterial>,
-    brass: &Handle<StandardMaterial>,
-) {
+/// 建立東側書信郵資秤重角：復古黃銅雙盤天平、標準砝碼木盒、貼郵票信封與牆面郵資表。
+pub(super) fn balance_corner(room: &mut Furnisher, assets: &AssetServer, palette: &Palette) {
+    let (walnut, wood, brass, cream, ink, rust) = (
+        &palette.walnut,
+        &palette.wood,
+        &palette.brass,
+        &palette.cream,
+        &palette.ink,
+        &palette.rust,
+    );
     room.model(
         assets,
         "models/small_wooden_table_01/small_wooden_table_01_1k.gltf",
@@ -221,21 +224,113 @@ pub(super) fn pressure_plate(
         1.48,
     );
     room.static_box([3.8, 0.40, 0.25], [0.70, 0.80, 1.32]);
-    room.block([3.8, 0.815, 0.25], [0.58, 0.02, 0.58], walnut);
     room.block([4.42, 0.84, -0.45], [0.05, 0.05, 1.48], brass);
-    let plate = room.block([3.8, 0.845, 0.25], [0.52, 0.05, 0.52], brass);
-    room.commands.entity(plate).insert((
-        RigidBody::Kinematic,
-        Collider::cuboid(1.0, 1.0, 1.0),
-        world_layers(),
-        Target::Plate,
-        PressurePlate {
-            center: Vec3::new(3.8, 0.845, 0.25),
-            half: Vec3::new(0.26, 0.05, 0.26),
-            base_y: 0.845,
-            travel: 0.035,
-        },
-    ));
+
+    room.block([3.80, 0.822, 0.14], [0.24, 0.044, 0.54], walnut);
+    room.block([3.80, 0.848, 0.14], [0.26, 0.012, 0.56], brass);
+    room.cylinder([3.80, 1.07, 0.14], 0.022, 0.45, brass);
+    room.cylinder([3.80, 0.87, 0.14], 0.06, 0.04, brass);
+    room.ellipsoid([3.80, 1.32, 0.14], [0.032, 0.042, 0.032], brass);
+
+    let beam = room
+        .commands
+        .spawn((
+            Transform::from_xyz(3.80, 1.28, 0.14).with_rotation(Quat::from_rotation_x(0.18)),
+            Visibility::default(),
+            BalanceBeam,
+        ))
+        .id();
+    let arm = room.block([0.0, 0.0, 0.0], [0.026, 0.028, 0.58], brass);
+    let pointer = room.block([0.0, -0.055, 0.0], [0.012, 0.10, 0.012], brass);
+    let north_cap = room.ellipsoid([0.0, 0.0, -0.28], [0.02, 0.02, 0.02], brass);
+    let south_cap = room.ellipsoid([0.0, 0.0, 0.28], [0.02, 0.02, 0.02], brass);
+    room.commands
+        .entity(beam)
+        .add_children(&[arm, pointer, north_cap, south_cap]);
+
+    let north_pan = room
+        .commands
+        .spawn((
+            Transform::from_xyz(3.80, 0.92, -0.14),
+            Visibility::default(),
+            BalanceCounterPan {
+                low_y: 0.92,
+                high_y: 1.01,
+            },
+        ))
+        .id();
+    let north_dish = room.cylinder([0.0, 0.0, 0.0], 0.135, 0.022, brass);
+    let north_weight = room.cylinder([0.0, 0.058, 0.0], 0.055, 0.095, brass);
+    let north_knob = room.cylinder([0.0, 0.118, 0.0], 0.02, 0.028, brass);
+    let north_rod_a = room.cylinder([-0.08, 0.16, 0.0], 0.005, 0.30, brass);
+    let north_rod_b = room.cylinder([0.08, 0.16, 0.0], 0.005, 0.30, brass);
+    room.commands.entity(north_pan).add_children(&[
+        north_dish,
+        north_weight,
+        north_knob,
+        north_rod_a,
+        north_rod_b,
+    ]);
+
+    let south_pan = room
+        .commands
+        .spawn((
+            Transform::from_xyz(3.80, 1.00, 0.42),
+            Visibility::default(),
+            RigidBody::Kinematic,
+            Collider::cuboid(0.32, 0.04, 0.32),
+            world_layers(),
+            Target::Plate,
+            PressurePlate {
+                center: Vec3::new(3.80, 1.00, 0.42),
+                half: Vec3::new(0.18, 0.06, 0.18),
+                base_y: 1.00,
+                travel: 0.075,
+            },
+        ))
+        .id();
+    let south_dish = room.cylinder([0.0, 0.0, 0.0], 0.155, 0.024, brass);
+    let south_rim = room.cylinder([0.0, 0.015, 0.0], 0.162, 0.012, brass);
+    let south_rod_a = room.cylinder([-0.09, 0.145, 0.0], 0.005, 0.28, brass);
+    let south_rod_b = room.cylinder([0.09, 0.145, 0.0], 0.005, 0.28, brass);
+    room.commands.entity(south_pan).add_children(&[
+        south_dish,
+        south_rim,
+        south_rod_a,
+        south_rod_b,
+    ]);
+
+    room.block([3.78, 0.832, 0.74], [0.22, 0.06, 0.16], walnut);
+    room.block([3.78, 0.864, 0.74], [0.19, 0.008, 0.13], ink);
+    room.cylinder([3.72, 0.882, 0.74], 0.016, 0.036, brass);
+    room.cylinder([3.77, 0.888, 0.74], 0.021, 0.048, brass);
+    room.sensor([3.78, 0.86, 0.74], [0.26, 0.14, 0.20], Target::WeightBox);
+
+    for (i, angle) in [(0, 0.08_f32), (1, -0.06), (2, 0.03)] {
+        let y = 0.808 + i as f32 * 0.012;
+        let env = room.block([3.78, y, -0.32], [0.22, 0.01, 0.14], cream);
+        room.commands.entity(env).insert(
+            Transform::from_xyz(3.78, y, -0.32)
+                .with_scale(Vec3::new(0.22, 0.01, 0.14))
+                .with_rotation(Quat::from_rotation_y(angle)),
+        );
+    }
+    room.block([3.71, 0.838, -0.28], [0.032, 0.004, 0.038], rust);
+    room.block([3.65, 0.815, -0.18], [0.022, 0.022, 0.12], rust);
+    room.cylinder([3.62, 0.838, -0.26], 0.018, 0.068, brass);
+    room.sensor([3.74, 0.84, -0.28], [0.34, 0.12, 0.28], Target::MailStack);
+
+    room.block([4.45, 1.44, 0.22], [0.03, 0.42, 0.56], walnut);
+    room.block([4.43, 1.44, 0.22], [0.016, 0.36, 0.48], cream);
+    for row in 0..5 {
+        room.block(
+            [4.418, 1.56 - row as f32 * 0.058, 0.22],
+            [0.004, 0.008, 0.36],
+            ink,
+        );
+    }
+    room.block([4.42, 1.63, 0.22], [0.02, 0.025, 0.52], wood);
+    room.sensor([4.40, 1.44, 0.22], [0.14, 0.46, 0.60], Target::PostageChart);
 }
 
 /// 建立南側出口，房門附帶隨鉸鏈旋轉的碰撞體，解鎖後可實際走出房間。

@@ -26,6 +26,9 @@ pub enum Target {
     Teacups,
     Crate,
     Bookshelf,
+    WeightBox,
+    MailStack,
+    PostageChart,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -63,6 +66,9 @@ impl FocusTarget {
             Self::Static(Target::Teacups) => MessageKey::InspectTeacups,
             Self::Static(Target::Crate) => MessageKey::InspectCrate,
             Self::Static(Target::Bookshelf) => MessageKey::InspectBookshelf,
+            Self::Static(Target::WeightBox) => MessageKey::InspectWeightBox,
+            Self::Static(Target::MailStack) => MessageKey::InspectMailStack,
+            Self::Static(Target::PostageChart) => MessageKey::InspectPostageChart,
         }
     }
 }
@@ -291,6 +297,15 @@ fn interact(session: &mut Session, world: &mut WorldAct, target: Option<FocusTar
         }
         Some(FocusTarget::Static(Target::Bookshelf)) => {
             session.notify(MessageKey::BookshelfNote, SoundCue::Tap);
+        }
+        Some(FocusTarget::Static(Target::WeightBox)) => {
+            session.notify(MessageKey::WeightBoxNote, SoundCue::Tap);
+        }
+        Some(FocusTarget::Static(Target::MailStack)) => {
+            session.notify(MessageKey::MailStackNote, SoundCue::Tap);
+        }
+        Some(FocusTarget::Static(Target::PostageChart)) => {
+            session.notify(MessageKey::PostageChartNote, SoundCue::Tap);
         }
         None => {}
     }
