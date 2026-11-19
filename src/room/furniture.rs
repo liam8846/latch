@@ -37,7 +37,8 @@ pub(super) fn shelves(
             room.block([-3.4, y + height * 0.22, z], [0.012, 0.016, 0.13], brass);
         }
     }
-    room.static_box([-3.94, 1.3, 1.42], [1.0, 2.6, 2.9]);
+    let shelf_box = room.static_box([-3.94, 1.3, 1.42], [1.0, 2.6, 2.9]);
+    room.commands.entity(shelf_box).insert(Target::Bookshelf);
 }
 
 /// 建立可沿 +Z 滑動的書桌抽屜，並在槽內放置可拿取的 2.2 公斤黃銅鎮紙。

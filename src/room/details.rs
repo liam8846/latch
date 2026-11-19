@@ -58,6 +58,7 @@ pub(super) fn keepsakes(
                 .with_rotation(Quat::from_rotation_x(std::f32::consts::FRAC_PI_2)),
         ));
     }
+    room.sensor([-1.37, 1.10, -2.88], [0.55, 0.24, 0.68], Target::Teacups);
     room.model(
         assets,
         "models/potted_plant_04/potted_plant_04_1k.gltf",
@@ -65,13 +66,33 @@ pub(super) fn keepsakes(
         0.35,
         1.35,
     );
-    room.model(
+    let vase_home = Transform::from_xyz(-0.18, 1.32, -4.12);
+    let vase = room
+        .commands
+        .spawn((
+            vase_home,
+            Visibility::default(),
+            RigidBody::Dynamic,
+            SleepingDisabled,
+            Collider::cylinder(0.056, 0.27),
+            Mass(PropKind::Vase.mass_kg()),
+            LinearDamping(0.7),
+            AngularDamping(1.4),
+            prop_layers(),
+            Grabbable {
+                kind: PropKind::Vase,
+                home: vase_home,
+            },
+        ))
+        .id();
+    let vase_mesh = room.model(
         assets,
         "models/brass_vase_03/brass_vase_03_1k.gltf",
-        [-0.18, 1.18, -4.12],
+        [0.0, -0.135, 0.0],
         0.0,
         1.35,
     );
+    room.commands.entity(vase).add_child(vase_mesh);
     room.block([-0.28, 1.023, -2.59], [0.018, 0.017, 0.32], ink);
     room.block([-0.28, 1.023, -2.42], [0.022, 0.021, 0.07], brass);
     let letter_on_desk = room.block([-0.66, 1.021, -3.18], [0.42, 0.008, 0.23], paper);

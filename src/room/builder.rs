@@ -137,17 +137,25 @@ impl Furnisher<'_, '_, '_> {
     }
 
     /// 建立暖色或月光點光源；光通量為流明，只有主要燈源產生陰影。
-    pub(super) fn light(&mut self, at: [f32; 3], rgb: [f32; 3], lumens: f32, shadows: bool) {
-        self.commands.spawn((
-            PointLight {
-                color: Color::srgb(rgb[0], rgb[1], rgb[2]),
-                intensity: lumens,
-                range: 16.0,
-                radius: 0.25,
-                shadow_maps_enabled: shadows,
-                ..default()
-            },
-            Transform::from_translation(Vec3::from(at)),
-        ));
+    pub(super) fn light(
+        &mut self,
+        at: [f32; 3],
+        rgb: [f32; 3],
+        lumens: f32,
+        shadows: bool,
+    ) -> Entity {
+        self.commands
+            .spawn((
+                PointLight {
+                    color: Color::srgb(rgb[0], rgb[1], rgb[2]),
+                    intensity: lumens,
+                    range: 16.0,
+                    radius: 0.25,
+                    shadow_maps_enabled: shadows,
+                    ..default()
+                },
+                Transform::from_translation(Vec3::from(at)),
+            ))
+            .id()
     }
 }

@@ -21,6 +21,7 @@ pub enum PropKind {
     Paperweight,
     Book,
     Box,
+    Vase,
 }
 
 impl PropKind {
@@ -28,6 +29,7 @@ impl PropKind {
     pub fn mass_kg(self) -> f32 {
         match self {
             Self::Paperweight => 2.2,
+            Self::Vase => 1.2,
             Self::Book => 0.8,
             Self::Box => 0.5,
         }
@@ -40,6 +42,7 @@ impl PropKind {
             Self::Paperweight => MessageKey::PickPaperweight,
             Self::Book => MessageKey::PickBook,
             Self::Box => MessageKey::PickBox,
+            Self::Vase => MessageKey::PickVase,
         }
     }
 
@@ -50,6 +53,7 @@ impl PropKind {
             Self::Paperweight => MessageKey::DropPaperweight,
             Self::Book => MessageKey::DropBook,
             Self::Box => MessageKey::DropBox,
+            Self::Vase => MessageKey::DropVase,
         }
     }
 }

@@ -4,6 +4,7 @@ use crate::{
         self, Drawer, GameLayer, Grabbable, HeldProp, PhysicsReset, PropControlQuery, PropKind,
     },
     player::{Player, START},
+    room::{LightKind, SwitchableLight},
     session::{Exhibit, SoundCue, UiCommand, UiCommands},
 };
 use avian3d::prelude::*;
@@ -20,6 +21,11 @@ pub enum Target {
     Door,
     Photograph,
     Plate,
+    DeskLamp,
+    WallSwitch,
+    Teacups,
+    Crate,
+    Bookshelf,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -52,6 +58,11 @@ impl FocusTarget {
             Self::Static(Target::Door) => MessageKey::OpenDoor,
             Self::Static(Target::Photograph) => MessageKey::ViewPhotograph,
             Self::Static(Target::Plate) => MessageKey::InspectPlate,
+            Self::Static(Target::DeskLamp) => MessageKey::ToggleLamp,
+            Self::Static(Target::WallSwitch) => MessageKey::ToggleSwitch,
+            Self::Static(Target::Teacups) => MessageKey::InspectTeacups,
+            Self::Static(Target::Crate) => MessageKey::InspectCrate,
+            Self::Static(Target::Bookshelf) => MessageKey::InspectBookshelf,
         }
     }
 }
@@ -73,6 +84,7 @@ pub struct WorldAct<'w, 's> {
     reset: ResMut<'w, PhysicsReset>,
     held: ResMut<'w, HeldProp>,
     drawers: Query<'w, 's, &'static mut Drawer>,
+    lights: Query<'w, 's, (&'static mut SwitchableLight, &'static mut PointLight)>,
     props: PropControlQuery<'w, 's>,
 }
 
@@ -166,6 +178,10 @@ pub fn act(
                 session.screen = Screen::Playing;
                 session.notify(MessageKey::Restarted, SoundCue::Start);
                 world.reset.0 = true;
+                for (mut switchable, mut point) in &mut world.lights {
+                    switchable.on = true;
+                    point.intensity = switchable.intensity;
+                }
                 if let Ok((mut transform, mut look)) = player.single_mut() {
                     transform.translation = START;
                     look.yaw = 0.0;
@@ -249,6 +265,62 @@ fn interact(session: &mut Session, world: &mut WorldAct, target: Option<FocusTar
         Some(FocusTarget::Static(Target::Plate)) => {
             session.notify(MessageKey::PlateHint, SoundCue::Tap);
         }
+        Some(FocusTarget::Static(Target::DeskLamp)) => {
+            toggle_light(
+                session,
+                &mut world.lights,
+                LightKind::DeskLamp,
+                MessageKey::LampOn,
+                MessageKey::LampOff,
+            );
+        }
+        Some(FocusTarget::Static(Target::WallSwitch)) => {
+            toggle_light(
+                session,
+                &mut world.lights,
+                LightKind::Chandelier,
+                MessageKey::ChandelierOn,
+                MessageKey::ChandelierOff,
+            );
+        }
+        Some(FocusTarget::Static(Target::Teacups)) => {
+            session.notify(MessageKey::TeacupsNote, SoundCue::Tap);
+        }
+        Some(FocusTarget::Static(Target::Crate)) => {
+            session.notify(MessageKey::CrateNote, SoundCue::Tap);
+        }
+        Some(FocusTarget::Static(Target::Bookshelf)) => {
+            session.notify(MessageKey::BookshelfNote, SoundCue::Tap);
+        }
         None => {}
+    }
+}
+
+/// 切換指定書房光源的開關狀態，同步更新點光源強度與提示訊息。
+fn toggle_light(
+    session: &mut Session,
+    lights: &mut Query<(&mut SwitchableLight, &mut PointLight)>,
+    kind: LightKind,
+    on_message: MessageKey,
+    off_message: MessageKey,
+) {
+    for (mut switchable, mut point) in lights.iter_mut() {
+        if switchable.kind == kind {
+            switchable.on = !switchable.on;
+            point.intensity = if switchable.on {
+                switchable.intensity
+            } else {
+                0.0
+            };
+            session.notify(
+                if switchable.on {
+                    on_message
+                } else {
+                    off_message
+                },
+                SoundCue::Tap,
+            );
+            break;
+        }
     }
 }
