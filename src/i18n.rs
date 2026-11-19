@@ -245,10 +245,7 @@ mod tests {
         );
         localizer.set_locale(Locale::ZhHant);
         assert_eq!(localizer.text("intro-duration", Some(&args)), "約 3 分鐘");
-        assert_eq!(
-            localizer.message(MessageKey::KeyTaken),
-            "已取得黃銅鑰匙。房門在你的身後。"
-        );
+        assert_eq!(localizer.message(MessageKey::KeyTaken), "已收起黃銅鑰匙。");
     }
 
     #[test]

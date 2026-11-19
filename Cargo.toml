@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bevy = { version = "=0.20.1", default-features = false, features = ["std", "async_executor", "bevy_asset", "bevy_log", "bevy_winit", "bevy_camera", "bevy_color", "bevy_image", "bevy_mesh", "bevy_shader", "bevy_render", "bevy_core_pipeline", "bevy_light", "bevy_pbr", "bevy_window", "tonemapping_luts", "webgpu", "png", "jpeg", "keyboard", "mouse", "zstd_rust"] }
+bevy = { version = "=0.20.1", default-features = false, features = ["std", "async_executor", "reflect_auto_register", "bevy_asset", "bevy_gltf", "bevy_scene", "bevy_log", "bevy_winit", "bevy_camera", "bevy_color", "bevy_image", "bevy_mesh", "bevy_shader", "bevy_render", "bevy_core_pipeline", "bevy_light", "bevy_pbr", "bevy_window", "tonemapping_luts", "webgpu", "png", "jpeg", "keyboard", "mouse", "zstd_rust"] }
 avian3d = { version = "=0.8.0", default-features = false, features = ["3d", "parry-f32", "default-collider"] }
 
 fluent-bundle = "=0.16.0"

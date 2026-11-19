@@ -117,6 +117,25 @@ impl Furnisher<'_, '_, '_> {
             .id()
     }
 
+    /// 載入 glTF 場景節點；位置與縮放採公尺制，繞 Y 軸旋轉角度以弧度表示。
+    pub(super) fn model(
+        &mut self,
+        assets: &AssetServer,
+        path: &'static str,
+        at: [f32; 3],
+        rotation_y: f32,
+        scale: f32,
+    ) -> Entity {
+        self.commands
+            .spawn((
+                WorldAssetRoot(assets.load(GltfAssetLabel::Scene(0).from_asset(path))),
+                Transform::from_translation(Vec3::from(at))
+                    .with_rotation(Quat::from_rotation_y(rotation_y))
+                    .with_scale(Vec3::splat(scale)),
+            ))
+            .id()
+    }
+
     /// 建立暖色或月光點光源；光通量為流明，只有主要燈源產生陰影。
     pub(super) fn light(&mut self, at: [f32; 3], rgb: [f32; 3], lumens: f32, shadows: bool) {
         self.commands.spawn((

@@ -52,15 +52,15 @@ restart = Start again
 note-eyebrow = A NOTE ON THE DESK
 note-title = You know this handwriting
 note-copy = “The last box of books is still here.
-    The safe's hidden latch is linked to the brass plate on the east side—
-    open the desk drawer and set the brass paperweight on it.
-    The code is the year we met, in the photograph on the west wall.”
+    The safe's old latch only gives way under a bit of weight.
+    The code is still the year we met—
+    if you have forgotten, look toward the west wall.”
 safe-close = Leave the safe
 safe-eyebrow = BRASS & MEMORY · No. 047
 safe-title = A four-digit memory
 safe-copy = Enter the safe's four-digit code.
 code-label = Four-digit code
-safe-hint = Find the year from the note in the photograph on the west wall.
+safe-hint = Enter the four-digit code.
 safe-submit = Turn the bolt
 win-eyebrow = CHAPTER COMPLETE
 win-title = Keep the memory.
@@ -71,20 +71,20 @@ win-restart = Return to the study
 win-footer = LATCH · END OF CHAPTER ONE
 edition = AN ORIGINAL ROOM
 notice-restarted = The Midnight Study, once again.
-notice-latch-released = The brass plate sinks. The hidden latch on the safe releases.
-notice-latch-locked = A hidden latch holds the safe shut. Weigh down the brass plate beside it.
-notice-drawer-opened = The drawer slides open. A heavy brass paperweight rests inside.
+notice-latch-released = The brass plate sinks, and the bolt beside it slides free.
+notice-latch-locked = An outer bolt holds the safe shut; a brass rod leads off to the side.
+notice-drawer-opened = The drawer slides open.
 notice-drawer-closed = The drawer slides shut.
-notice-plate-hint = A brass balance plate. Place something heavy on it.
-notice-safe-unlocked = The bolt releases. An unsent letter lies beside the key.
-notice-incorrect-code = Not that year. The note mentioned a photograph on the west wall.
-notice-key-taken = Brass key acquired. The door is behind you.
+notice-plate-hint = A slightly suspended brass plate, linked to a brass rod.
+notice-safe-unlocked = The bolt releases. An unsent letter waits inside.
+notice-incorrect-code = Wrong code. The bolt does not budge.
+notice-key-taken = Brass key acquired.
 notice-door-unlocked = The key turns. Night air waits beyond the door.
-notice-need-key = The door is locked. You need a brass key.
+notice-need-key = The door is locked.
 notice-door-open = The door is open. Keep walking.
 notice-escaped = Beyond the door, the air is finally moving.
-objective-search = Read the desk note, open the drawer, and weigh down the brass plate
-objective-latch = The safe latch is released. Find the year in the photograph and open the safe
+objective-search = Explore the study and find a way to release the safe's latch
+objective-latch = The latch is free. Find the four-digit code and open the safe
 objective-safe = Read the letter in the safe and take the key
 objective-key = Use the brass key to unlock the door
 objective-door = The door is open. Take the letter with you

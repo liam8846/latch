@@ -9,7 +9,7 @@ use crate::{
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
-/// 建立西側書架與有節奏的書脊；不依賴任何外部模型或貼圖。
+/// 建立西側書架與有節奏的書脊，維持低面數以兼顧網頁 WebGPU 效能。
 pub(super) fn shelves(
     room: &mut Furnisher,
     walnut: &Handle<StandardMaterial>,
@@ -114,13 +114,8 @@ pub(super) fn desk_drawer(
         .add_children(&[base, ridge, knob]);
 }
 
-/// 建立可推動的書桌椅；鎖定水平翻倒軸讓椅子能平穩在地板上滑動與旋轉。
-pub(super) fn chair(
-    room: &mut Furnisher,
-    walnut: &Handle<StandardMaterial>,
-    wood: &Handle<StandardMaterial>,
-    trim: &Handle<StandardMaterial>,
-) {
+/// 建立可推動的復古木質書桌椅；鎖定水平翻倒軸讓椅子能平穩在地板上滑動與旋轉。
+pub(super) fn chair(room: &mut Furnisher, assets: &AssetServer) {
     let home = Transform::from_xyz(-0.65, 0.015, -1.62);
     let root = room
         .commands
@@ -138,32 +133,32 @@ pub(super) fn chair(
             Pushable { home },
         ))
         .id();
-    let seat = room.block([0.0, 0.515, 0.0], [0.7, 0.15, 0.67], walnut);
-    let cushion = room.block([0.0, 0.595, 0.0], [0.64, 0.08, 0.61], trim);
-    let back = room.block([0.0, 1.005, 0.29], [0.7, 0.82, 0.09], wood);
+    let mesh = room.model(
+        assets,
+        "models/painted_wooden_chair_01/painted_wooden_chair_01_1k.gltf",
+        [0.0, 0.0, 0.0],
+        std::f32::consts::PI,
+        1.22,
+    );
     let seat_collider = room
         .commands
         .spawn((
             Transform::from_xyz(0.0, 0.30, 0.0),
-            Collider::cuboid(0.7, 0.60, 0.67),
+            Collider::cuboid(0.58, 0.60, 0.68),
             furniture_layers(),
         ))
         .id();
     let back_collider = room
         .commands
         .spawn((
-            Transform::from_xyz(0.0, 1.005, 0.29),
-            Collider::cuboid(0.7, 0.82, 0.09),
+            Transform::from_xyz(0.0, 0.90, 0.26),
+            Collider::cuboid(0.58, 0.65, 0.14),
             furniture_layers(),
         ))
         .id();
-    let mut parts = vec![seat, cushion, back, seat_collider, back_collider];
-    for x in [-0.29, 0.29] {
-        for z in [-0.25, 0.25] {
-            parts.push(room.block([x, 0.25, z], [0.07, 0.5, 0.07], walnut));
-        }
-    }
-    room.commands.entity(root).add_children(&parts);
+    room.commands
+        .entity(root)
+        .add_children(&[mesh, seat_collider, back_collider]);
 }
 
 /// 建立面向 -X 的保險箱、沿 Y 軸旋轉的碰撞門鉸鏈與連動向東側配重托盤的暗扣栓。
@@ -210,27 +205,33 @@ pub(super) fn safe(
     room.block([4.36, 2.45, -1.65], [0.12, 0.5, 0.22], brass);
 }
 
-/// 建立東側胡桃木邊桌與黃銅配重托盤，透過牆面黃銅連桿視覺連結保險箱暗扣。
+/// 建立東側復古木桌與黃銅配重托盤，透過牆面黃銅連桿視覺連結保險箱暗扣。
 pub(super) fn pressure_plate(
     room: &mut Furnisher,
+    assets: &AssetServer,
     walnut: &Handle<StandardMaterial>,
-    wood: &Handle<StandardMaterial>,
     brass: &Handle<StandardMaterial>,
 ) {
-    room.solid_block([3.8, 0.78, 0.25], [0.84, 0.08, 0.84], wood);
-    room.solid_block([3.8, 0.37, 0.25], [0.64, 0.74, 0.64], walnut);
-    room.block([3.8, 0.83, 0.25], [0.58, 0.02, 0.58], walnut);
+    room.model(
+        assets,
+        "models/small_wooden_table_01/small_wooden_table_01_1k.gltf",
+        [3.8, 0.015, 0.25],
+        std::f32::consts::FRAC_PI_2,
+        1.48,
+    );
+    room.static_box([3.8, 0.40, 0.25], [0.70, 0.80, 1.32]);
+    room.block([3.8, 0.815, 0.25], [0.58, 0.02, 0.58], walnut);
     room.block([4.42, 0.84, -0.45], [0.05, 0.05, 1.48], brass);
-    let plate = room.block([3.8, 0.86, 0.25], [0.52, 0.05, 0.52], brass);
+    let plate = room.block([3.8, 0.845, 0.25], [0.52, 0.05, 0.52], brass);
     room.commands.entity(plate).insert((
         RigidBody::Kinematic,
         Collider::cuboid(1.0, 1.0, 1.0),
         world_layers(),
         Target::Plate,
         PressurePlate {
-            center: Vec3::new(3.8, 0.86, 0.25),
+            center: Vec3::new(3.8, 0.845, 0.25),
             half: Vec3::new(0.26, 0.05, 0.26),
-            base_y: 0.86,
+            base_y: 0.845,
             travel: 0.035,
         },
     ));

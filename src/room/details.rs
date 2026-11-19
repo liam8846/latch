@@ -34,9 +34,10 @@ pub(super) fn photograph(
     room.light([-3.88, 2.66, -1.0], [1.0, 0.78, 0.50], 550.0, false);
 }
 
-/// 兩只杯子、筆、信封、可拿取精裝書與木盒，讓桌面兼具敘事感與物理互動。
+/// 兩只並排茶杯、窗台植栽與黃銅瓶、鋼筆、信封、可拿取精裝書與木盒，兼顧敘事與效能。
 pub(super) fn keepsakes(
     room: &mut Furnisher,
+    assets: &AssetServer,
     paper: &Handle<StandardMaterial>,
     brass: &Handle<StandardMaterial>,
     ink: &Handle<StandardMaterial>,
@@ -57,6 +58,20 @@ pub(super) fn keepsakes(
                 .with_rotation(Quat::from_rotation_x(std::f32::consts::FRAC_PI_2)),
         ));
     }
+    room.model(
+        assets,
+        "models/potted_plant_04/potted_plant_04_1k.gltf",
+        [-1.72, 1.18, -4.12],
+        0.35,
+        1.35,
+    );
+    room.model(
+        assets,
+        "models/brass_vase_03/brass_vase_03_1k.gltf",
+        [-0.18, 1.18, -4.12],
+        0.0,
+        1.35,
+    );
     room.block([-0.28, 1.023, -2.59], [0.018, 0.017, 0.32], ink);
     room.block([-0.28, 1.023, -2.42], [0.022, 0.021, 0.07], brass);
     let letter_on_desk = room.block([-0.66, 1.021, -3.18], [0.42, 0.008, 0.23], paper);

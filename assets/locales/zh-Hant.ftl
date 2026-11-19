@@ -49,15 +49,15 @@ restart = 重新開始
 note-eyebrow = 桌上的便箋
 note-title = 你認得這個字跡
 note-copy = 「最後一箱書留在這裡。
-    保險箱的暗扣連著東側的黃銅托盤——
-    拉開書桌抽屜，把黃銅鎮紙放上去。
-    密碼是我們相遇的年份，在西牆那張照片裡。」
+    保險箱的老暗扣總得壓點份量才肯鬆手；
+    密碼仍是我們相遇的那一年，
+    若忘了，抬頭看看西牆吧。」
 safe-close = 離開保險箱
 safe-eyebrow = BRASS & MEMORY · No. 047
 safe-title = 四位數的回憶
 safe-copy = 輸入保險箱的四位數密碼。
 code-label = 四位數密碼
-safe-hint = 便箋提起的相遇年份，在西牆照片上。
+safe-hint = 輸入四位數密碼。
 safe-submit = 轉動鎖栓
 win-eyebrow = CHAPTER COMPLETE
 win-title = 帶走回憶，
@@ -68,20 +68,20 @@ win-restart = 再回書房
 win-footer = LATCH · 第一章完
 edition = AN ORIGINAL ROOM
 notice-restarted = 午夜書房，再一次。
-notice-latch-released = 配重托盤沉了下去。東側保險箱的暗扣鬆開了。
-notice-latch-locked = 保險箱被暗扣鎖住了。需要壓下旁邊的黃銅配重托盤。
-notice-drawer-opened = 抽屜滑開了。裡面躺著一塊沉甸甸的黃銅鎮紙。
+notice-latch-released = 托盤沉了下去，一旁的銅栓隨之鬆開。
+notice-latch-locked = 保險箱的外栓卡住了，銅桿往一旁延伸過去。
+notice-drawer-opened = 抽屜滑開了。
 notice-drawer-closed = 抽屜關上了。
-notice-plate-hint = 一座黃銅配重托盤。把夠重的東西放上去試試。
-notice-safe-unlocked = 鎖栓鬆開了。鑰匙旁，是一封沒有寄出的信。
-notice-incorrect-code = 這不是那一年。便箋提過西牆的照片。
-notice-key-taken = 已取得黃銅鑰匙。房門在你的身後。
+notice-plate-hint = 一座微微懸空的黃銅托盤，下方連著銅桿。
+notice-safe-unlocked = 鎖栓鬆開了，裡面有封未寄出的信。
+notice-incorrect-code = 密碼不對，鎖栓沒有動靜。
+notice-key-taken = 已收起黃銅鑰匙。
 notice-door-unlocked = 鑰匙轉動。門外的夜風正在等你。
-notice-need-key = 門鎖住了。需要一把黃銅鑰匙。
+notice-need-key = 門鎖住了。
 notice-door-open = 門已打開，向前走。
 notice-escaped = 門外的空氣，終於不再靜止。
-objective-search = 閱讀書桌便箋，拉開抽屜找出黃銅鎮紙並放上配重托盤
-objective-latch = 保險箱暗扣已鬆開，在照片中尋找年份並打開保險箱
+objective-search = 環顧午夜書房，設法解開東側保險箱的暗扣
+objective-latch = 暗扣已鬆開，找出四位數密碼並打開保險箱
 objective-safe = 讀完保險箱裡的信，帶走鑰匙
 objective-key = 使用黃銅鑰匙打開房門
 objective-door = 門已開啟，帶著信走出去

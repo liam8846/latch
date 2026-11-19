@@ -41,13 +41,7 @@ pub fn setup(
     let cream = room.material([0.78, 0.71, 0.53], 0.0);
     let ink = room.material([0.02, 0.035, 0.04], 0.0);
     let rust = room.material([0.34, 0.13, 0.08], 0.0);
-    let leaves = room.material([0.075, 0.23, 0.12], 0.0);
     let steel = room.material([0.12, 0.17, 0.17], 0.6);
-    let glow = room.materials.add(StandardMaterial {
-        base_color: Color::srgb(1.0, 0.75, 0.38),
-        emissive: LinearRgba::rgb(3.0, 1.5, 0.4),
-        ..default()
-    });
     let moon = room.materials.add(StandardMaterial {
         base_color: Color::srgb(0.025, 0.055, 0.10),
         emissive: LinearRgba::rgb(0.018, 0.045, 0.10),
@@ -111,7 +105,7 @@ pub fn setup(
     room.block([-0.9, 1.12, -4.17], [2.9, 0.12, 0.42], &wood);
     room.ellipsoid([-0.13, 2.7, -4.28], [0.19, 0.19, 0.04], &cream);
     details::curtains(&mut room, &trim, &brass);
-    room.light([-0.8, 2.65, -3.9], [0.48, 0.63, 1.0], 1650.0, true);
+    room.light([-0.8, 2.65, -3.9], [0.48, 0.63, 1.0], 1650.0, false);
     room.solid_block([-0.8, 0.94, -2.85], [2.65, 0.13, 1.12], &wood);
     for x in [-1.93, 0.33] {
         for z in [-3.27, -2.43] {
@@ -128,39 +122,38 @@ pub fn setup(
         );
     }
     room.sensor([-0.65, 1.05, -2.56], [0.50, 0.08, 0.38], Target::Note);
-    room.cylinder([0.1, 1.06, -3.03], 0.18, 0.07, &brass);
-    room.cylinder([0.1, 1.38, -3.03], 0.024, 0.65, &brass);
-    room.cylinder([0.1, 1.7, -3.03], 0.31, 0.24, &trim);
-    room.cylinder([0.1, 1.57, -3.03], 0.26, 0.016, &glow);
-    room.light([0.1, 1.52, -2.90], [1.0, 0.72, 0.42], 1550.0, true);
-    chair(&mut room, &walnut, &wood, &trim);
+    room.model(
+        &assets,
+        "models/vintage_oil_lamp/vintage_oil_lamp_1k.gltf",
+        [0.18, 1.005, -3.05],
+        -0.35,
+        0.72,
+    );
+    room.light([0.18, 1.42, -2.92], [1.0, 0.72, 0.42], 1550.0, true);
+    chair(&mut room, &assets);
     shelves(&mut room, &walnut, &wood, &brass);
     safe(&mut room, &steel, &brass, &ink);
-    pressure_plate(&mut room, &walnut, &wood, &brass);
+    pressure_plate(&mut room, &assets, &walnut, &brass);
     details::photograph(&mut room, &assets, &walnut, &brass, &cream);
-    details::keepsakes(&mut room, &cream, &brass, &ink, &wood, &rust);
+    details::keepsakes(&mut room, &assets, &cream, &brass, &ink, &wood, &rust);
     details::panelling(&mut room, &walnut, &wood);
-    room.cylinder([-3.6, 0.32, -3.6], 0.36, 0.64, &rust);
-    room.cylinder([-3.6, 0.66, -3.6], 0.32, 0.04, &ink);
-    for i in 0..9 {
-        let angle = i as f32 * 2.4;
-        let height = 0.95 + (i % 4) as f32 * 0.2;
-        let x = -3.6 + angle.cos() * 0.3;
-        let z = -3.6 + angle.sin() * 0.3;
-        room.cylinder([x, height * 0.5 + 0.4, z], 0.018, height, &wood);
-        let leaf = room.ellipsoid([x, height + 0.35, z], [0.28, 0.11, 0.15], &leaves);
-        room.commands.entity(leaf).insert(
-            Transform::from_xyz(x, height + 0.35, z)
-                .with_rotation(Quat::from_rotation_y(angle))
-                .with_scale(Vec3::new(0.28, 0.11, 0.15)),
-        );
-    }
-    room.static_box([-3.6, 0.7, -3.6], [0.8, 1.4, 0.8]);
+    room.model(
+        &assets,
+        "models/wooden_crate_01/wooden_crate_01_1k.gltf",
+        [-3.45, 0.02, -3.55],
+        0.25,
+        1.35,
+    );
+    room.static_box([-3.45, 0.28, -3.55], [1.12, 0.52, 0.62]);
     exit(&mut room, &wood, &walnut, &brass);
-    room.light([0.0, 2.64, 0.1], [1.0, 0.78, 0.51], 1800.0, true);
-    room.cylinder([0.0, 3.13, 0.1], 0.025, 0.66, &brass);
-    room.cylinder([0.0, 2.83, 0.1], 0.48, 0.2, &trim);
-    room.cylinder([0.0, 2.72, 0.1], 0.43, 0.025, &glow);
+    room.light([0.0, 2.55, 0.1], [1.0, 0.78, 0.51], 1800.0, true);
+    room.model(
+        &assets,
+        "models/lantern_chandelier_01/lantern_chandelier_01_1k.gltf",
+        [0.0, 3.50, 0.1],
+        0.0,
+        0.85,
+    );
 }
 
 /// 以秒步長逼近目標角度；門與鑰匙的呈現完全由唯一謎題進度導出。
