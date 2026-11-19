@@ -80,8 +80,11 @@ notice-door-unlocked = 鑰匙轉動。門外的長廊連著玄關。
 notice-need-key = 門鎖住了。
 notice-door-open = 門已打開，走向門外的玄關。
 notice-foyer-entered = 門外是老宅的玄關。臨街的大門還上了暗栓。
-notice-foyer-chain-engaged = 銅鏈受重繃緊，拉桿箱內傳來齒輪咬合的聲響。
-notice-foyer-chain-slack = 拉桿空轉彈回，下方的銅鏈沒有受力。
+notice-clock-synced = 掛鐘敲響三聲，鐘擺重新擺動，一旁的拉桿保險應聲鬆開。
+notice-clock-not-synced = 拉桿被鐘機械卡死了，東牆的掛鐘還停著。
+notice-clock-hour = 時針往前撥了一格。
+notice-clock-minute = 分針往前撥了五分。
+notice-clock-running = 掛鐘正穩定擺動，時間不再靜止。
 notice-lever-engaged = 黃銅拉桿扣下，牆內傳來一聲沉實的咬合。
 notice-levers-reset = 順序不對，四道拉桿齊聲彈回原位。
 notice-front-door-unlocked = 最後一道門栓鬆脫，臨街大門向夜色敞開。
@@ -108,12 +111,10 @@ target-pick-paperweight = 拿起黃銅鎮紙
 target-pick-book = 拿起精裝書
 target-pick-box = 拿起木盒
 target-pick-vase = 拿起黃銅瓶
-target-pick-doorstop = 拿起鑄鐵門擋
 target-drop-paperweight = 放下黃銅鎮紙
 target-drop-book = 放下精裝書
 target-drop-box = 放下木盒
 target-drop-vase = 放下黃銅瓶
-target-drop-doorstop = 放下鑄鐵門擋
 target-lamp = 開關油燈
 target-switch = 切換吊燈開關
 target-teacups = 查看茶杯
@@ -128,7 +129,8 @@ target-lever-one = 撥動拉桿 I
 target-lever-two = 撥動拉桿 II
 target-lever-three = 撥動拉桿 III
 target-lever-four = 撥動拉桿 IV
-target-foyer-plate = 查看銅鏈托台
+target-clock-hour = 撥動掛鐘時針（+1 時）
+target-clock-minute = 撥動掛鐘分針（+5 分）
 target-front-door = 檢視臨街大門
 target-leave-house = 步入夜色
 target-mailbox = 查看玄關信箱
@@ -147,8 +149,7 @@ notice-weight-box = 一隻標準砝碼木盒，最大號的黃銅砝碼槽空著
 notice-mail-stack = 幾封貼好郵票、尚未封蠟的舊信封，收件處寫著海邊站台。
 notice-postage-chart = 泛黃的郵資秤重表，旁註寫著：「厚信與書包皆須先過秤。」
 notice-mailbox = 信箱裡夾著半截褪色車票，背面用淺粉筆寫著：「熄了玄關的燈，門邊的暗記才看得清。」
-notice-coat-rack = 大衣已經收走了，只剩一把舊黑傘靠在架邊，腳邊放著沉重的鑄鐵門擋。
-notice-foyer-plate-hint = 一座連著拉桿箱銅鏈的小托台，現在還鬆弛懸空著。
+notice-coat-rack = 大衣已經收走了，只剩一把舊黑傘安靜地靠在架邊。
 notice-moon-mark-bright = 玄關燈太亮，牆面只看得到淡淡的塗漆痕跡。
 inventory-empty = 尚未取得物品
 inventory-key = 黃銅鑰匙 · 一封信
@@ -186,8 +187,8 @@ timetable-caption = 原本被木箱擋在牆角，邊緣仍留著鉛筆畫下的
 moonmark-eyebrow = 南牆暗處 · 夜光塗漆
 moonmark-title = 留給夜行人的順序
 moonmark-copy = 「別再搭 21:15 那班往海邊的去程了。
-    從 22:35 踏上回程末班，
-    依停靠先後扳下門栓，大門就會放你走。」
+    先把停住的掛鐘撥到回程始發的時刻，
+    再依停靠先後扳下門栓，大門就會放你走。」
 moonmark-caption = 只有在熄燈後的月色裡，這幾行淡藍字跡才會顯現。
 
 error-renderer = 繪圖已停止。請重新載入再試一次；若仍失敗，請提供下方的診斷資訊。

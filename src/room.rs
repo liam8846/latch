@@ -4,15 +4,11 @@ mod foyer;
 mod furniture;
 mod materials;
 
-use crate::{
-    Session,
-    interaction::Target,
-    physics::{PlateKind, PressurePlate},
-};
+use crate::{Session, interaction::Target, physics::PressurePlate};
 use bevy::prelude::*;
 use builder::Furnisher;
 use furniture::{balance_corner, chair, desk_drawer, exit, safe, shelves};
-use latch::puzzle::{Lever, Progress};
+use latch::puzzle::{ClockHand, Lever, Progress};
 
 #[derive(Component)]
 pub enum Hinge {
@@ -23,6 +19,12 @@ pub enum Hinge {
 
 #[derive(Component)]
 pub struct LeverHinge(pub Lever);
+
+#[derive(Component)]
+pub struct ClockHandPivot(pub ClockHand);
+
+#[derive(Component)]
+pub struct ClockPendulum;
 
 #[derive(Component)]
 pub struct Key;
@@ -214,7 +216,7 @@ pub fn setup(
     foyer::setup(&mut room, &assets, &palette);
 }
 
-type BalanceAnimateQueries<'w, 's> = (
+type MechanismAnimateQueries<'w, 's> = (
     Query<
         'w,
         's,
@@ -224,6 +226,8 @@ type BalanceAnimateQueries<'w, 's> = (
             Without<BalanceBeam>,
             Without<BalanceCounterPan>,
             Without<LeverHinge>,
+            Without<ClockHandPivot>,
+            Without<ClockPendulum>,
         ),
     >,
     Query<
@@ -235,13 +239,21 @@ type BalanceAnimateQueries<'w, 's> = (
             Without<Hinge>,
             Without<BalanceCounterPan>,
             Without<LeverHinge>,
+            Without<ClockHandPivot>,
+            Without<ClockPendulum>,
         ),
     >,
     Query<
         'w,
         's,
         (&'static BalanceCounterPan, &'static mut Transform),
-        (Without<Hinge>, Without<BalanceBeam>, Without<LeverHinge>),
+        (
+            Without<Hinge>,
+            Without<BalanceBeam>,
+            Without<LeverHinge>,
+            Without<ClockHandPivot>,
+            Without<ClockPendulum>,
+        ),
     >,
     Query<
         'w,
@@ -251,6 +263,33 @@ type BalanceAnimateQueries<'w, 's> = (
             Without<Hinge>,
             Without<BalanceBeam>,
             Without<BalanceCounterPan>,
+            Without<ClockHandPivot>,
+            Without<ClockPendulum>,
+        ),
+    >,
+    Query<
+        'w,
+        's,
+        (&'static ClockHandPivot, &'static mut Transform),
+        (
+            Without<Hinge>,
+            Without<BalanceBeam>,
+            Without<BalanceCounterPan>,
+            Without<LeverHinge>,
+            Without<ClockPendulum>,
+        ),
+    >,
+    Query<
+        'w,
+        's,
+        &'static mut Transform,
+        (
+            With<ClockPendulum>,
+            Without<Hinge>,
+            Without<BalanceBeam>,
+            Without<BalanceCounterPan>,
+            Without<LeverHinge>,
+            Without<ClockHandPivot>,
         ),
     >,
 );
@@ -261,13 +300,13 @@ type VisibilityAnimateQueries<'w, 's> = (
     Query<'w, 's, &'static SwitchableLight>,
 );
 
-/// 以秒步長逼近門板角度、天平橫樑與玄關拉桿，並同步鑰匙與熄燈夜光暗記的可見度。
+/// 以秒步長逼近門板、天平、掛鐘指針／鐘擺與玄關拉桿，並同步鑰匙與熄燈夜光暗記的可見度。
 pub fn animate(
     time: Res<Time>,
     session: Res<Session>,
     mut hinges: Query<(&Hinge, &mut Transform)>,
     mut visibility_queries: VisibilityAnimateQueries,
-    mut balance: BalanceAnimateQueries,
+    mut mechanisms: MechanismAnimateQueries,
 ) {
     let dt = time.delta_secs().min(0.1);
     for (hinge, mut transform) in &mut hinges {
@@ -285,26 +324,26 @@ pub fn animate(
             transform.rotation = transform.rotation.slerp(target, 1.0 - (-dt * 5.0).exp());
         }
     }
-    let ratio = balance
+    let ratio = mechanisms
         .0
         .iter()
-        .find(|(plate, _)| plate.kind == PlateKind::StudyBalance)
+        .next()
         .map_or(0.0, |(plate, transform)| {
             ((plate.base_y - transform.translation.y) / plate.travel).clamp(0.0, 1.0)
         });
     let tilt = Quat::from_rotation_x(0.18 + (-0.04 - 0.18) * ratio);
-    for mut transform in &mut balance.1 {
+    for mut transform in &mut mechanisms.1 {
         if transform.rotation.angle_between(tilt) > 1e-4 {
             transform.rotation = tilt;
         }
     }
-    for (pan, mut transform) in &mut balance.2 {
+    for (pan, mut transform) in &mut mechanisms.2 {
         let target_y = pan.low_y + (pan.high_y - pan.low_y) * ratio;
         if (transform.translation.y - target_y).abs() > 1e-4 {
             transform.translation.y = target_y;
         }
     }
-    for (lever, mut transform) in &mut balance.3 {
+    for (lever, mut transform) in &mut mechanisms.3 {
         let target = Quat::from_rotation_z(if session.progress.lever_is_down(lever.0) {
             0.55
         } else {
@@ -312,6 +351,26 @@ pub fn animate(
         });
         if transform.rotation.angle_between(target) > 1e-4 {
             transform.rotation = transform.rotation.slerp(target, 1.0 - (-dt * 9.0).exp());
+        }
+    }
+    for (hand, mut transform) in &mut mechanisms.4 {
+        let angle = match hand.0 {
+            ClockHand::Hour => session.clock.hour_angle_rad(),
+            ClockHand::Minute => session.clock.minute_angle_rad(),
+        };
+        let target = Quat::from_rotation_x(angle);
+        if transform.rotation.angle_between(target) > 1e-4 {
+            transform.rotation = transform.rotation.slerp(target, 1.0 - (-dt * 12.0).exp());
+        }
+    }
+    let swing_target = Quat::from_rotation_x(if session.progress.foyer_clock_synced() {
+        (time.elapsed_secs() * 3.0).sin() * 0.16
+    } else {
+        0.0
+    });
+    for mut transform in &mut mechanisms.5 {
+        if transform.rotation.angle_between(swing_target) > 1e-4 {
+            transform.rotation = swing_target;
         }
     }
     for mut visibility in &mut visibility_queries.0 {

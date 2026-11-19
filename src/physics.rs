@@ -22,15 +22,13 @@ pub enum PropKind {
     Book,
     Box,
     Vase,
-    Doorstop,
 }
 
 impl PropKind {
-    /// 回傳各物理道具的品質（公斤），供天平與玄關承重托台共用。
+    /// 回傳各物理道具的品質（公斤），供書房天平秤盤判定與剛體質量共用。
     pub fn mass_kg(self) -> f32 {
         match self {
             Self::Paperweight => 2.2,
-            Self::Doorstop => 1.8,
             Self::Vase => 1.2,
             Self::Book => 0.8,
             Self::Box => 0.5,
@@ -45,7 +43,6 @@ impl PropKind {
             Self::Book => MessageKey::PickBook,
             Self::Box => MessageKey::PickBox,
             Self::Vase => MessageKey::PickVase,
-            Self::Doorstop => MessageKey::PickDoorstop,
         }
     }
 
@@ -57,7 +54,6 @@ impl PropKind {
             Self::Book => MessageKey::DropBook,
             Self::Box => MessageKey::DropBox,
             Self::Vase => MessageKey::DropVase,
-            Self::Doorstop => MessageKey::DropDoorstop,
         }
     }
 }
@@ -81,15 +77,8 @@ pub struct Drawer {
     pub progress: f32,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum PlateKind {
-    StudyBalance,
-    FoyerChain,
-}
-
 #[derive(Component)]
 pub struct PressurePlate {
-    pub kind: PlateKind,
     pub center: Vec3,
     pub half: Vec3,
     pub base_y: f32,
@@ -343,30 +332,13 @@ pub fn update_pressure_plate(
             }
         }
         let triggered = plate_triggered(total_mass);
-        let latched = match plate.kind {
-            PlateKind::StudyBalance => {
-                if triggered
-                    && session.progress == Progress::Searching
-                    && session.progress.apply(Action::ReleaseLatch) == Reply::LatchReleased
-                {
-                    session.notify(MessageKey::LatchReleased, SoundCue::Unlock);
-                }
-                session.progress.latch_is_released()
-            }
-            PlateKind::FoyerChain => {
-                if triggered
-                    && matches!(
-                        session.progress,
-                        Progress::DoorOpen | Progress::FoyerEntered
-                    )
-                    && session.progress.apply(Action::EngageFoyerChain) == Reply::FoyerChainEngaged
-                {
-                    session.notify(MessageKey::FoyerChainEngaged, SoundCue::Unlock);
-                }
-                session.progress.foyer_chain_engaged()
-            }
-        };
-        let depressed = triggered || latched;
+        if triggered
+            && session.progress == Progress::Searching
+            && session.progress.apply(Action::ReleaseLatch) == Reply::LatchReleased
+        {
+            session.notify(MessageKey::LatchReleased, SoundCue::Unlock);
+        }
+        let depressed = triggered || session.progress.latch_is_released();
         let target_y = if depressed {
             plate.base_y - plate.travel
         } else {
@@ -516,7 +488,6 @@ mod tests {
             Collider::cuboid(0.52, 0.05, 0.52),
             world_layers(),
             PressurePlate {
-                kind: PlateKind::StudyBalance,
                 center: Vec3::new(0.0, 0.58, -1.5),
                 half: Vec3::new(0.26, 0.05, 0.26),
                 base_y: 0.58,

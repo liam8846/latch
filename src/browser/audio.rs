@@ -188,6 +188,7 @@ impl Audio {
             SoundCue::Wrong => &[(50, 0.0), (49, 0.15)],
             SoundCue::Win => &[(65, 0.0), (69, 0.2), (72, 0.4)],
             SoundCue::Unlock => &[(69, 0.0), (76, 0.12)],
+            SoundCue::Chime => &[(53, 0.0), (60, 0.28), (65, 0.56)],
             SoundCue::Key => &[],
             SoundCue::Begin | SoundCue::Start => &[(62, 0.0)],
             SoundCue::Tap => &[(64, 0.0)],

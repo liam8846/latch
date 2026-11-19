@@ -1,23 +1,22 @@
 use super::{
-    Hinge, LeverHinge, LightKind, MoonMark, SwitchableLight, builder::Furnisher, materials::Palette,
+    ClockHandPivot, ClockPendulum, Hinge, LeverHinge, LightKind, MoonMark, SwitchableLight,
+    builder::Furnisher, materials::Palette,
 };
 use crate::{
     interaction::Target,
-    physics::{
-        Grabbable, PlateKind, PressurePlate, PropKind, Pushable, furniture_layers, prop_layers,
-        world_layers,
-    },
+    physics::{Pushable, furniture_layers, world_layers},
 };
 use avian3d::prelude::*;
 use bevy::prelude::*;
-use latch::puzzle::Lever;
+use latch::puzzle::{ClockHand, Lever};
+use std::f32::consts::{FRAC_PI_2, TAU};
 
 /// 建立與午夜書房南側出口無縫銜接的長廊與老宅玄關門廳，複用共用 PBR 材質與輕量模型。
 pub(super) fn setup(room: &mut Furnisher, assets: &AssetServer, palette: &Palette) {
     corridor(room, palette);
     shell(room, palette);
     blocking_crate_and_timetable(room, assets, palette);
-    lever_panel_and_chain_cradle(room, palette);
+    wall_clock_and_levers(room, palette);
     foyer_props(room, assets, palette);
     front_door_and_moon_mark(room, palette);
 }
@@ -94,7 +93,7 @@ fn blocking_crate_and_timetable(room: &mut Furnisher, assets: &AssetServer, pale
         assets,
         "models/wooden_crate_01/wooden_crate_01_1k.gltf",
         [0.0, 0.0, 0.0],
-        std::f32::consts::FRAC_PI_2,
+        FRAC_PI_2,
         1.25,
     );
     let upper_chest = room.block([0.0, 0.68, 0.0], [0.56, 0.46, 0.78], &palette.wood);
@@ -112,8 +111,94 @@ fn blocking_crate_and_timetable(room: &mut Furnisher, assets: &AssetServer, pale
         .add_children(&[lower_mesh, upper_chest, upper_band, collider]);
 }
 
-/// 在玄關東牆建立四道編號黃銅拉桿（I–IV）與下方銅鏈承重托台，須先加壓繃緊銅鏈才可咬合。
-fn lever_panel_and_chain_cradle(room: &mut Furnisher, palette: &Palette) {
+/// 在玄關東牆建立停在 12:00 的復古黃銅掛鐘與連動四道拉桿（I–IV），校時至 22:35 觸發鐘擺與拉桿解鎖。
+fn wall_clock_and_levers(room: &mut Furnisher, palette: &Palette) {
+    let clock_z = 8.20_f32;
+    let face_y = 1.86_f32;
+    room.block([3.44, 1.62, clock_z], [0.10, 0.96, 0.64], &palette.walnut);
+    room.block([3.39, 1.36, clock_z], [0.04, 0.34, 0.36], &palette.ink);
+    let rim = room.cylinder([3.39, face_y, clock_z], 0.28, 0.04, &palette.brass);
+    room.commands.entity(rim).insert(
+        Transform::from_xyz(3.39, face_y, clock_z)
+            .with_rotation(Quat::from_rotation_z(FRAC_PI_2))
+            .with_scale(Vec3::new(0.28, 0.04, 0.28)),
+    );
+    let dial = room.cylinder([3.37, face_y, clock_z], 0.25, 0.02, &palette.cream);
+    room.commands.entity(dial).insert(
+        Transform::from_xyz(3.37, face_y, clock_z)
+            .with_rotation(Quat::from_rotation_z(FRAC_PI_2))
+            .with_scale(Vec3::new(0.25, 0.02, 0.25)),
+    );
+    for tick in 0..12 {
+        let angle = tick as f32 * (TAU / 12.0);
+        let major = tick % 3 == 0;
+        let radius = if major { 0.205 } else { 0.215 };
+        let y = face_y + angle.cos() * radius;
+        let z = clock_z + angle.sin() * radius;
+        let length = if major { 0.048 } else { 0.024 };
+        let width = if major { 0.018 } else { 0.010 };
+        let mark = room.block([3.356, y, z], [0.008, length, width], &palette.ink);
+        room.commands.entity(mark).insert(
+            Transform::from_xyz(3.356, y, z)
+                .with_rotation(Quat::from_rotation_x(angle))
+                .with_scale(Vec3::new(0.008, length, width)),
+        );
+    }
+    room.ellipsoid(
+        [3.342, face_y, clock_z],
+        [0.016, 0.016, 0.016],
+        &palette.brass,
+    );
+
+    let hour_pivot = room
+        .commands
+        .spawn((
+            Transform::from_xyz(3.350, face_y, clock_z),
+            Visibility::default(),
+            ClockHandPivot(ClockHand::Hour),
+        ))
+        .id();
+    let hour_bar = room.block([0.0, 0.068, 0.0], [0.010, 0.145, 0.022], &palette.ink);
+    room.commands.entity(hour_pivot).add_child(hour_bar);
+
+    let minute_pivot = room
+        .commands
+        .spawn((
+            Transform::from_xyz(3.344, face_y, clock_z),
+            Visibility::default(),
+            ClockHandPivot(ClockHand::Minute),
+        ))
+        .id();
+    let minute_bar = room.block([0.0, 0.098, 0.0], [0.008, 0.205, 0.014], &palette.brass);
+    room.commands.entity(minute_pivot).add_child(minute_bar);
+
+    let pendulum = room
+        .commands
+        .spawn((
+            Transform::from_xyz(3.36, 1.54, clock_z),
+            Visibility::default(),
+            ClockPendulum,
+        ))
+        .id();
+    let rod = room.block([0.0, -0.14, 0.0], [0.010, 0.26, 0.010], &palette.brass);
+    let bob = room.ellipsoid([0.0, -0.27, 0.0], [0.018, 0.052, 0.052], &palette.brass);
+    room.commands.entity(pendulum).add_children(&[rod, bob]);
+
+    for (hand, dz) in [(ClockHand::Hour, -0.22_f32), (ClockHand::Minute, 0.22)] {
+        let knob = room.cylinder([3.36, 1.48, clock_z + dz], 0.036, 0.05, &palette.brass);
+        room.commands.entity(knob).insert(
+            Transform::from_xyz(3.36, 1.48, clock_z + dz)
+                .with_rotation(Quat::from_rotation_z(FRAC_PI_2))
+                .with_scale(Vec3::new(0.036, 0.05, 0.036)),
+        );
+        room.sensor(
+            [3.32, 1.48, clock_z + dz],
+            [0.18, 0.22, 0.22],
+            Target::ClockDial(hand),
+        );
+    }
+
+    room.block([3.44, 1.48, 8.92], [0.05, 0.05, 0.85], &palette.brass);
     room.block([3.46, 1.48, 10.2], [0.08, 0.70, 1.84], &palette.walnut);
     room.block([3.41, 1.48, 10.2], [0.03, 0.58, 1.72], &palette.steel);
     room.block([3.44, 1.48, 12.25], [0.05, 0.05, 2.45], &palette.brass);
@@ -144,28 +229,9 @@ fn lever_panel_and_chain_cradle(room: &mut Furnisher, palette: &Palette) {
         room.commands.entity(pivot).add_children(&[shaft, knob]);
         room.sensor([3.26, 1.46, z], [0.30, 0.44, 0.32], Target::Lever(lever));
     }
-
-    room.solid_block([3.20, 0.25, 10.20], [0.54, 0.50, 0.62], &palette.walnut);
-    for dz in [-0.18_f32, 0.18] {
-        room.cylinder([3.26, 0.86, 10.20 + dz], 0.012, 0.60, &palette.brass);
-    }
-    let cradle = room.block([3.20, 0.54, 10.20], [0.44, 0.045, 0.50], &palette.brass);
-    room.commands.entity(cradle).insert((
-        RigidBody::Kinematic,
-        Collider::cuboid(1.0, 1.0, 1.0),
-        world_layers(),
-        Target::FoyerPlate,
-        PressurePlate {
-            kind: PlateKind::FoyerChain,
-            center: Vec3::new(3.20, 0.54, 10.20),
-            half: Vec3::new(0.24, 0.06, 0.27),
-            base_y: 0.54,
-            travel: 0.045,
-        },
-    ));
 }
 
-/// 建立玄關信箱、衣帽架、可拿取鑄鐵門擋、邊桌盆栽與連動的玄關燈具。
+/// 建立玄關信箱、衣帽架與黑傘、邊桌盆栽與連動的玄關燈具。
 fn foyer_props(room: &mut Furnisher, assets: &AssetServer, palette: &Palette) {
     room.block([-1.18, 1.28, 13.44], [0.34, 0.42, 0.14], &palette.steel);
     room.block([-1.18, 1.40, 13.36], [0.26, 0.04, 0.03], &palette.brass);
@@ -174,7 +240,7 @@ fn foyer_props(room: &mut Furnisher, assets: &AssetServer, palette: &Palette) {
     room.cylinder([-1.95, 0.03, 12.85], 0.26, 0.05, &palette.walnut);
     room.cylinder([-1.95, 0.96, 12.85], 0.036, 1.86, &palette.walnut);
     for i in 0..4 {
-        let angle = std::f32::consts::FRAC_PI_2 * i as f32;
+        let angle = FRAC_PI_2 * i as f32;
         let hook = room.block(
             [-1.95 + angle.cos() * 0.12, 1.76, 12.85 + angle.sin() * 0.12],
             [0.16, 0.025, 0.025],
@@ -190,37 +256,11 @@ fn foyer_props(room: &mut Furnisher, assets: &AssetServer, palette: &Palette) {
     room.static_box([-1.95, 0.95, 12.85], [0.54, 1.90, 0.54]);
     room.sensor([-1.95, 1.05, 12.85], [0.64, 1.90, 0.64], Target::CoatRack);
 
-    let stop_home = Transform::from_xyz(-1.45, 0.09, 12.45);
-    let doorstop = room
-        .commands
-        .spawn((
-            stop_home,
-            Visibility::default(),
-            RigidBody::Dynamic,
-            SleepingDisabled,
-            Collider::cuboid(0.20, 0.15, 0.16),
-            Mass(PropKind::Doorstop.mass_kg()),
-            LinearDamping(0.8),
-            AngularDamping(1.5),
-            prop_layers(),
-            Grabbable {
-                kind: PropKind::Doorstop,
-                home: stop_home,
-            },
-        ))
-        .id();
-    let stop_body = room.block([0.0, -0.015, 0.0], [0.20, 0.12, 0.16], &palette.steel);
-    let stop_cap = room.block([0.0, 0.052, 0.0], [0.14, 0.025, 0.11], &palette.brass);
-    let stop_ring = room.cylinder([0.0, 0.088, 0.0], 0.028, 0.045, &palette.brass);
-    room.commands
-        .entity(doorstop)
-        .add_children(&[stop_body, stop_cap, stop_ring]);
-
     room.model(
         assets,
         "models/small_wooden_table_01/small_wooden_table_01_1k.gltf",
         [3.12, 0.015, 8.2],
-        std::f32::consts::FRAC_PI_2,
+        FRAC_PI_2,
         1.35,
     );
     room.static_box([3.12, 0.36, 8.2], [0.62, 0.72, 1.24]);

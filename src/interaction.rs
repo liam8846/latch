@@ -11,7 +11,7 @@ use avian3d::prelude::*;
 use bevy::{ecs::system::SystemParam, prelude::*};
 use latch::{
     i18n::MessageKey,
-    puzzle::{Action, Lever, Progress, Reply},
+    puzzle::{Action, ClockFace, ClockHand, Lever, Progress, Reply},
 };
 
 #[derive(Clone, Copy, Component, PartialEq, Eq)]
@@ -32,7 +32,7 @@ pub enum Target {
     Timetable,
     MoonMark,
     Lever(Lever),
-    FoyerPlate,
+    ClockDial(ClockHand),
     FrontDoor,
     Mailbox,
     CoatRack,
@@ -83,7 +83,8 @@ impl FocusTarget {
             Self::Static(Target::Lever(Lever::Two)) => MessageKey::PullLeverTwo,
             Self::Static(Target::Lever(Lever::Three)) => MessageKey::PullLeverThree,
             Self::Static(Target::Lever(Lever::Four)) => MessageKey::PullLeverFour,
-            Self::Static(Target::FoyerPlate) => MessageKey::InspectFoyerPlate,
+            Self::Static(Target::ClockDial(ClockHand::Hour)) => MessageKey::TurnClockHour,
+            Self::Static(Target::ClockDial(ClockHand::Minute)) => MessageKey::TurnClockMinute,
             Self::Static(Target::FrontDoor) if progress.front_door_is_open() => {
                 MessageKey::LeaveHouse
             }
@@ -204,6 +205,7 @@ pub fn act(
             UiCommand::Failure => session.screen = Screen::Paused,
             UiCommand::Restart => {
                 session.progress.apply(Action::Restart);
+                session.clock = ClockFace::default();
                 session.screen = Screen::Playing;
                 session.notify(MessageKey::Restarted, SoundCue::Start);
                 world.reset.0 = true;
@@ -344,16 +346,31 @@ fn interact(session: &mut Session, world: &mut WorldAct, target: Option<FocusTar
                 session.notify(MessageKey::MoonMarkTooBright, SoundCue::Tap);
             }
         }
-        Some(FocusTarget::Static(Target::FoyerPlate)) => {
-            session.notify(MessageKey::FoyerPlateHint, SoundCue::Tap);
+        Some(FocusTarget::Static(Target::ClockDial(hand))) => {
+            if session.progress.foyer_clock_synced() {
+                session.notify(MessageKey::ClockAlreadySynced, SoundCue::Tap);
+            } else {
+                session.clock.advance(hand);
+                if session.clock.is_target()
+                    && session.progress.apply(Action::SyncClock) == Reply::ClockSynced
+                {
+                    session.notify(MessageKey::ClockSynced, SoundCue::Chime);
+                } else {
+                    let message = match hand {
+                        ClockHand::Hour => MessageKey::ClockHourTick,
+                        ClockHand::Minute => MessageKey::ClockMinuteTick,
+                    };
+                    session.notify(message, SoundCue::Tap);
+                }
+            }
         }
         Some(FocusTarget::Static(Target::Lever(lever))) => {
             if session.progress == Progress::DoorOpen {
                 session.progress.apply(Action::EnterFoyer);
             }
             match session.progress.apply(Action::PullLever(lever)) {
-                Reply::FoyerChainSlack => {
-                    session.notify(MessageKey::FoyerChainSlack, SoundCue::Wrong);
+                Reply::ClockNotSynced => {
+                    session.notify(MessageKey::ClockNotSynced, SoundCue::Wrong);
                 }
                 Reply::LeverEngaged => {
                     session.notify(MessageKey::LeverEngaged, SoundCue::Tap);

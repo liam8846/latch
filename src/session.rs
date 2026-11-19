@@ -1,5 +1,8 @@
 use bevy::prelude::*;
-use latch::{i18n::MessageKey, puzzle::Progress};
+use latch::{
+    i18n::MessageKey,
+    puzzle::{ClockFace, Progress},
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Exhibit {
@@ -42,6 +45,7 @@ pub enum SoundCue {
     Tap,
     Wrong,
     Unlock,
+    Chime,
     Key,
     Win,
 }
@@ -55,6 +59,7 @@ pub struct Notice {
 #[derive(Resource, Default)]
 pub struct Session {
     pub progress: Progress,
+    pub clock: ClockFace,
     pub screen: Screen,
     pub notice: Option<Notice>,
     pub revision: u32,

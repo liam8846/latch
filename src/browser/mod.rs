@@ -306,7 +306,7 @@ fn objective(progress: Progress) -> MessageKey {
         Progress::KeyHeld => MessageKey::ObjectiveKey,
         Progress::DoorOpen => MessageKey::ObjectiveDoor,
         Progress::FoyerEntered
-        | Progress::FoyerPowered
+        | Progress::FoyerClockSynced
         | Progress::FoyerStep1
         | Progress::FoyerStep2
         | Progress::FoyerStep3 => MessageKey::ObjectiveFoyer,

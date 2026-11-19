@@ -83,8 +83,11 @@ notice-door-unlocked = The key turns. Beyond the study lies the old foyer.
 notice-need-key = The door is locked.
 notice-door-open = The door is open. Step into the foyer.
 notice-foyer-entered = You step into the foyer. The street door is still bolted shut.
-notice-foyer-chain-engaged = The brass chain pulls taut; gears engage inside the lever box.
-notice-foyer-chain-slack = The lever spins loose. The brass chain below carries no tension.
+notice-clock-synced = The wall clock chimes three times; the pendulum swings and the lever lock releases.
+notice-clock-not-synced = The lever is pinned by the clockwork. The wall clock still stands frozen.
+notice-clock-hour = Hour hand advanced by one hour.
+notice-clock-minute = Minute hand advanced by five minutes.
+notice-clock-running = The wall clock ticks steadily now.
 notice-lever-engaged = The brass lever locks down with a heavy metallic click.
 notice-levers-reset = Wrong sequence. All four levers snap back upright.
 notice-front-door-unlocked = The final bolt slides free. The street door swings into the night.
@@ -111,12 +114,10 @@ target-pick-paperweight = Pick up brass paperweight
 target-pick-book = Pick up hardcover book
 target-pick-box = Pick up wooden box
 target-pick-vase = Pick up brass vase
-target-pick-doorstop = Pick up iron doorstop
 target-drop-paperweight = Set down brass paperweight
 target-drop-book = Set down hardcover book
 target-drop-box = Set down wooden box
 target-drop-vase = Set down brass vase
-target-drop-doorstop = Set down iron doorstop
 target-lamp = Toggle oil lamp
 target-switch = Toggle ceiling light
 target-teacups = Examine tea cups
@@ -131,7 +132,8 @@ target-lever-one = Pull lever I
 target-lever-two = Pull lever II
 target-lever-three = Pull lever III
 target-lever-four = Pull lever IV
-target-foyer-plate = Inspect chain cradle
+target-clock-hour = Advance clock hour (+1h)
+target-clock-minute = Advance clock minute (+5m)
 target-front-door = Inspect street door
 target-leave-house = Step into the night
 target-mailbox = Check foyer mailbox
@@ -150,8 +152,7 @@ notice-weight-box = A walnut calibration weight box. The largest brass weight sl
 notice-mail-stack = Stamped envelopes awaiting wax seals, addressed to the seaside platform.
 notice-postage-chart = A yellowed postal tariff chart: “Weigh heavy letters and book parcels before posting.”
 notice-mailbox = A half-torn ticket stub with chalk on the back: “Turn off the foyer lights to read the mark beside the door.”
-notice-coat-rack = The coats are gone; an old black umbrella leans here above a heavy cast-iron doorstop.
-notice-foyer-plate-hint = A small cradle hung from the lever box chain, hanging slack.
+notice-coat-rack = The coats are gone; only a weathered black umbrella leans against the stand.
 notice-moon-mark-bright = Too bright here—only faint paint traces show on the wall.
 inventory-empty = No items yet
 inventory-key = Brass key · A letter
@@ -191,8 +192,8 @@ timetable-caption = Hidden behind a stacked crate, with faint pencil marks along
 moonmark-eyebrow = SOUTH WALL IN DARKNESS · LUMINOUS PAINT
 moonmark-title = An order left for the night traveler
 moonmark-copy = “Do not board the 21:15 outbound train to the sea.
-    Take the return train starting at 22:35,
-    and draw the bolts along its stops to unlatch the door.”
+    First set the stopped wall clock to the return train's departure,
+    then draw the bolts along its stops to unlatch the door.”
 moonmark-caption = Visible only when the foyer lights are off.
 
 error-renderer = Rendering stopped. Reload to try again. If this happens again, share the diagnostic details below.
