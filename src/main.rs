@@ -2,6 +2,7 @@
 
 mod bridge;
 mod interaction;
+mod physics;
 mod player;
 mod room;
 pub mod session;
@@ -27,7 +28,9 @@ fn main() {
         .init_resource::<Session>()
         .init_resource::<session::UiCommands>()
         .init_resource::<interaction::Focus>()
-        .add_plugins(
+        .init_resource::<physics::HeldProp>()
+        .init_resource::<physics::PhysicsReset>()
+        .add_plugins((
             DefaultPlugins
                 .set(AssetPlugin {
                     meta_check: bevy::asset::AssetMetaCheck::Never,
@@ -43,14 +46,19 @@ fn main() {
                     }),
                     ..default()
                 }),
-        )
+            avian3d::PhysicsPlugins::default(),
+        ))
         .add_systems(Startup, (bridge::setup, room::setup, player::setup))
         .add_systems(
             Update,
             (
                 bridge::read_commands,
                 interaction::act,
+                physics::apply_reset,
                 player::move_player,
+                physics::animate_drawers,
+                physics::carry_held_prop,
+                physics::update_pressure_plate,
                 interaction::focus_target,
                 room::animate,
                 bridge::publish,

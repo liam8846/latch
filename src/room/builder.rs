@@ -1,4 +1,8 @@
-use crate::{interaction::Target, player::Solid};
+use crate::{
+    interaction::Target,
+    physics::{interactable_layers, world_layers},
+};
+use avian3d::prelude::*;
 use bevy::prelude::*;
 
 pub(super) struct Furnisher<'a, 'w, 's> {
@@ -31,6 +35,25 @@ impl Furnisher<'_, '_, '_> {
                 Mesh3d(self.cube.clone()),
                 MeshMaterial3d(material.clone()),
                 Transform::from_translation(Vec3::from(at)).with_scale(Vec3::from(size)),
+            ))
+            .id()
+    }
+
+    /// 建立附帶靜態 Avian 碰撞體的結構長方體，座標與尺寸皆為公尺。
+    pub(super) fn solid_block(
+        &mut self,
+        at: [f32; 3],
+        size: [f32; 3],
+        material: &Handle<StandardMaterial>,
+    ) -> Entity {
+        self.commands
+            .spawn((
+                Mesh3d(self.cube.clone()),
+                MeshMaterial3d(material.clone()),
+                Transform::from_translation(Vec3::from(at)).with_scale(Vec3::from(size)),
+                RigidBody::Static,
+                Collider::cuboid(1.0, 1.0, 1.0),
+                world_layers(),
             ))
             .id()
     }
@@ -70,18 +93,28 @@ impl Furnisher<'_, '_, '_> {
             .id()
     }
 
-    /// 加入玩家水平碰撞與互動視線共用的世界空間包圍盒。
-    pub(super) fn solid(&mut self, at: [f32; 3], half: [f32; 3]) {
-        self.commands.spawn(Solid {
-            center: Vec3::from(at),
-            half: Vec3::from(half),
-        });
+    /// 加入無可視網格的靜態長方體碰撞體，尺寸為全寬高深（公尺）。
+    pub(super) fn static_box(&mut self, at: [f32; 3], size: [f32; 3]) -> Entity {
+        self.commands
+            .spawn((
+                Transform::from_translation(Vec3::from(at)),
+                RigidBody::Static,
+                Collider::cuboid(size[0], size[1], size[2]),
+                world_layers(),
+            ))
+            .id()
     }
 
-    /// 以獨立節點定義互動焦點，和可視網格、碰撞體分開。
-    pub(super) fn target(&mut self, at: [f32; 3], target: Target) {
+    /// 建立純射線互動感應盒，讓準星可直接命中特定物件而不產生實體阻擋。
+    pub(super) fn sensor(&mut self, at: [f32; 3], size: [f32; 3], target: Target) -> Entity {
         self.commands
-            .spawn((Transform::from_translation(Vec3::from(at)), target));
+            .spawn((
+                Transform::from_translation(Vec3::from(at)),
+                Collider::cuboid(size[0], size[1], size[2]),
+                interactable_layers(),
+                target,
+            ))
+            .id()
     }
 
     /// 建立暖色或月光點光源；光通量為流明，只有主要燈源產生陰影。

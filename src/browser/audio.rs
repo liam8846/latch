@@ -24,8 +24,10 @@ impl MusicScene {
             Screen::Inspect(_) | Screen::Safe => Self::Reading,
             Screen::Won => Self::Departure,
             Screen::Playing
-                if session.progress != Progress::Searching
-                    && session.progress != Progress::SafeOpen =>
+                if matches!(
+                    session.progress,
+                    Progress::KeyHeld | Progress::DoorOpen | Progress::Escaped
+                ) =>
             {
                 Self::Departure
             }

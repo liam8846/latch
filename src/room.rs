@@ -6,7 +6,7 @@ mod materials;
 use crate::{Session, interaction::Target};
 use bevy::prelude::*;
 use builder::Furnisher;
-use furniture::{exit, safe, shelves};
+use furniture::{chair, desk_drawer, exit, pressure_plate, safe, shelves};
 use latch::puzzle::Progress;
 
 #[derive(Component)]
@@ -66,6 +66,7 @@ pub fn setup(
         ],
     );
     room.block([0.0, -0.12, 0.0], [9.2, 0.2, 9.2], &walnut);
+    room.static_box([0.0, -0.0875, 1.0], [10.0, 0.2, 14.0]);
     for row in 0..24 {
         for column in 0..8 {
             let shade = 0.8 + ((row * 7 + column * 3) % 9) as f32 * 0.035;
@@ -75,13 +76,13 @@ pub fn setup(
             room.block([x, 0.0, z], [1.115, 0.025, 0.365], &plank);
         }
     }
-    room.block([0.0, 1.75, -4.6], [9.2, 3.5, 0.2], &wall);
-    room.block([-4.6, 1.75, 0.0], [0.2, 3.5, 9.2], &wall);
-    room.block([4.6, 1.75, 0.0], [0.2, 3.5, 9.2], &wall);
-    room.block([-1.8, 1.75, 4.6], [5.6, 3.5, 0.2], &wall);
-    room.block([3.7, 1.75, 4.6], [1.8, 3.5, 0.2], &wall);
-    room.block([1.9, 3.0, 4.6], [1.8, 1.0, 0.2], &wall);
-    room.block([0.0, 3.55, 0.0], [9.3, 0.1, 9.3], &trim);
+    room.solid_block([0.0, 1.75, -4.6], [9.2, 3.5, 0.2], &wall);
+    room.solid_block([-4.6, 1.75, 0.0], [0.2, 3.5, 9.2], &wall);
+    room.solid_block([4.6, 1.75, 0.0], [0.2, 3.5, 9.2], &wall);
+    room.solid_block([-1.8, 1.75, 4.6], [5.6, 3.5, 0.2], &wall);
+    room.solid_block([3.7, 1.75, 4.6], [1.8, 3.5, 0.2], &wall);
+    room.solid_block([1.9, 3.0, 4.6], [1.8, 1.0, 0.2], &wall);
+    room.solid_block([0.0, 3.55, 0.0], [9.3, 0.1, 9.3], &trim);
     for side in [-1.0, 1.0] {
         for height in [0.14, 1.0, 3.25] {
             room.block([side * 4.47, height, 0.0], [0.08, 0.07, 9.0], &brass);
@@ -111,15 +112,13 @@ pub fn setup(
     room.ellipsoid([-0.13, 2.7, -4.28], [0.19, 0.19, 0.04], &cream);
     details::curtains(&mut room, &trim, &brass);
     room.light([-0.8, 2.65, -3.9], [0.48, 0.63, 1.0], 1650.0, true);
-    room.block([-0.8, 0.94, -2.85], [2.65, 0.13, 1.12], &wood);
+    room.solid_block([-0.8, 0.94, -2.85], [2.65, 0.13, 1.12], &wood);
     for x in [-1.93, 0.33] {
         for z in [-3.27, -2.43] {
-            room.block([x, 0.46, z], [0.12, 0.92, 0.12], &walnut);
+            room.solid_block([x, 0.44, z], [0.12, 0.87, 0.12], &walnut);
         }
     }
-    room.block([-1.45, 0.69, -2.86], [0.69, 0.37, 0.91], &walnut);
-    room.block([-1.45, 0.69, -2.39], [0.63, 0.28, 0.03], &wood);
-    room.block([-1.45, 0.69, -2.35], [0.21, 0.025, 0.04], &brass);
+    desk_drawer(&mut room, &walnut, &wood, &brass);
     room.block([-0.65, 1.023, -2.56], [0.47, 0.015, 0.34], &cream);
     for i in 0..4 {
         room.block(
@@ -128,24 +127,16 @@ pub fn setup(
             &ink,
         );
     }
-    room.target([-0.65, 1.08, -2.55], Target::Note);
-    room.solid([-0.8, 0.5, -2.85], [1.33, 0.5, 0.57]);
+    room.sensor([-0.65, 1.05, -2.56], [0.50, 0.08, 0.38], Target::Note);
     room.cylinder([0.1, 1.06, -3.03], 0.18, 0.07, &brass);
     room.cylinder([0.1, 1.38, -3.03], 0.024, 0.65, &brass);
     room.cylinder([0.1, 1.7, -3.03], 0.31, 0.24, &trim);
     room.cylinder([0.1, 1.57, -3.03], 0.26, 0.016, &glow);
     room.light([0.1, 1.52, -2.90], [1.0, 0.72, 0.42], 1550.0, true);
-    room.block([-0.65, 0.53, -1.62], [0.7, 0.15, 0.67], &walnut);
-    room.block([-0.65, 0.61, -1.62], [0.64, 0.08, 0.61], &trim);
-    room.block([-0.65, 1.02, -1.33], [0.7, 0.82, 0.09], &wood);
-    for x in [-0.94, -0.36] {
-        for z in [-1.87, -1.37] {
-            room.block([x, 0.25, z], [0.07, 0.5, 0.07], &walnut);
-        }
-    }
-    room.solid([-0.65, 0.7, -1.62], [0.36, 0.7, 0.35]);
+    chair(&mut room, &walnut, &wood, &trim);
     shelves(&mut room, &walnut, &wood, &brass);
     safe(&mut room, &steel, &brass, &ink);
+    pressure_plate(&mut room, &walnut, &wood, &brass);
     details::photograph(&mut room, &assets, &walnut, &brass, &cream);
     details::keepsakes(&mut room, &cream, &brass, &ink, &wood, &rust);
     details::panelling(&mut room, &walnut, &wood);
@@ -164,7 +155,7 @@ pub fn setup(
                 .with_scale(Vec3::new(0.28, 0.11, 0.15)),
         );
     }
-    room.solid([-3.6, 0.7, -3.6], [0.4, 0.7, 0.4]);
+    room.static_box([-3.6, 0.7, -3.6], [0.8, 1.4, 0.8]);
     exit(&mut room, &wood, &walnut, &brass);
     room.light([0.0, 2.64, 0.1], [1.0, 0.78, 0.51], 1800.0, true);
     room.cylinder([0.0, 3.13, 0.1], 0.025, 0.66, &brass);

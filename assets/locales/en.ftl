@@ -52,9 +52,9 @@ restart = Start again
 note-eyebrow = A NOTE ON THE DESK
 note-title = You know this handwriting
 note-copy = “The last box of books is still here.
-    The safe opens with the year we met.
-    If you have forgotten, look at the photograph
-    on the west wall.”
+    The safe's hidden latch is linked to the brass plate on the east side—
+    open the desk drawer and set the brass paperweight on it.
+    The code is the year we met, in the photograph on the west wall.”
 safe-close = Leave the safe
 safe-eyebrow = BRASS & MEMORY · No. 047
 safe-title = A four-digit memory
@@ -71,6 +71,11 @@ win-restart = Return to the study
 win-footer = LATCH · END OF CHAPTER ONE
 edition = AN ORIGINAL ROOM
 notice-restarted = The Midnight Study, once again.
+notice-latch-released = The brass plate sinks. The hidden latch on the safe releases.
+notice-latch-locked = A hidden latch holds the safe shut. Weigh down the brass plate beside it.
+notice-drawer-opened = The drawer slides open. A heavy brass paperweight rests inside.
+notice-drawer-closed = The drawer slides shut.
+notice-plate-hint = A brass balance plate. Place something heavy on it.
 notice-safe-unlocked = The bolt releases. An unsent letter lies beside the key.
 notice-incorrect-code = Not that year. The note mentioned a photograph on the west wall.
 notice-key-taken = Brass key acquired. The door is behind you.
@@ -78,7 +83,8 @@ notice-door-unlocked = The key turns. Night air waits beyond the door.
 notice-need-key = The door is locked. You need a brass key.
 notice-door-open = The door is open. Keep walking.
 notice-escaped = Beyond the door, the air is finally moving.
-objective-search = Read the desk note. Find the year you met in the photograph
+objective-search = Read the desk note, open the drawer, and weigh down the brass plate
+objective-latch = The safe latch is released. Find the year in the photograph and open the safe
 objective-safe = Read the letter in the safe and take the key
 objective-key = Use the brass key to unlock the door
 objective-door = The door is open. Take the letter with you
@@ -88,6 +94,15 @@ target-safe-open = Read the letter again
 target-safe = Enter the safe code
 target-leave = Leave the room
 target-door = Open the door
+target-drawer-open = Open the drawer
+target-drawer-close = Close the drawer
+target-plate = Inspect the brass plate
+target-pick-paperweight = Pick up brass paperweight
+target-pick-book = Pick up hardcover book
+target-pick-box = Pick up wooden box
+target-drop-paperweight = Set down brass paperweight
+target-drop-book = Set down hardcover book
+target-drop-box = Set down wooden box
 inventory-empty = No items yet
 inventory-key = Brass key · A letter
 note-caption = A familiar crease runs across the corner.

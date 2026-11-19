@@ -301,6 +301,7 @@ impl Drop for BrowserUi {
 fn objective(progress: Progress) -> MessageKey {
     match progress {
         Progress::Searching => MessageKey::ObjectiveSearch,
+        Progress::LatchReleased => MessageKey::ObjectiveLatch,
         Progress::SafeOpen => MessageKey::ObjectiveSafe,
         Progress::KeyHeld => MessageKey::ObjectiveKey,
         Progress::DoorOpen => MessageKey::ObjectiveDoor,

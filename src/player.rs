@@ -1,52 +1,25 @@
-use crate::session::SoundCue;
-use crate::{Screen, Session, bridge};
-use bevy::{input::mouse::AccumulatedMouseMotion, prelude::*};
+use crate::{
+    Screen, Session, bridge,
+    physics::{GameLayer, Pushable},
+    session::SoundCue,
+};
+use avian3d::prelude::*;
+use bevy::{ecs::system::SystemParam, input::mouse::AccumulatedMouseMotion, prelude::*};
 use latch::{
     i18n::MessageKey,
     puzzle::{Action, Progress},
 };
 
 pub const START: Vec3 = Vec3::new(0.0, 1.65, 2.8);
+const PLAYER_RADIUS: f32 = 0.24;
+const PLAYER_CYLINDER_HEIGHT: f32 = 1.12;
+const BODY_Y_OFFSET: f32 = -0.70;
+const COLLISION_SKIN: f32 = 0.02;
 
 #[derive(Component)]
 pub struct Player {
     pub yaw: f32,
     pub pitch: f32,
-}
-
-#[derive(Clone, Copy, Component)]
-pub struct Solid {
-    pub center: Vec3,
-    pub half: Vec3,
-}
-
-impl Solid {
-    /// 在公尺制世界 XZ 平面，以玩家半徑 0.23 公尺檢查碰撞。
-    fn blocks(self, position: Vec3) -> bool {
-        (position.x - self.center.x).abs() < self.half.x + 0.23
-            && (position.z - self.center.z).abs() < self.half.z + 0.23
-    }
-
-    /// 回傳世界空間射線進入長方體的距離；零方向分量使用平行平面判定。
-    pub fn ray_distance(self, origin: Vec3, direction: Vec3) -> Option<f32> {
-        let mut near = 0.0_f32;
-        let mut far = f32::INFINITY;
-        for axis in 0..3 {
-            let low = self.center[axis] - self.half[axis];
-            let high = self.center[axis] + self.half[axis];
-            if direction[axis].abs() < 0.00001 {
-                if origin[axis] < low || origin[axis] > high {
-                    return None;
-                }
-            } else {
-                let a = (low - origin[axis]) / direction[axis];
-                let b = (high - origin[axis]) / direction[axis];
-                near = near.max(a.min(b));
-                far = far.min(a.max(b));
-            }
-        }
-        (far >= near).then_some(near)
-    }
 }
 
 /// 建立眼高 1.65 公尺的第一人稱相機；yaw/pitch 使用弧度，零 yaw 朝向 -Z。
@@ -69,35 +42,43 @@ pub fn setup(mut commands: Commands) {
     ));
 }
 
-/// 依秒步長移動玩家，分軸碰撞可沿牆滑動；焦點離開、模態視窗與暫停時停止輸入。
+#[derive(SystemParam)]
+pub struct MoveInput<'w, 's> {
+    time: Res<'w, Time>,
+    keys: ResMut<'w, ButtonInput<KeyCode>>,
+    mouse: Res<'w, AccumulatedMouseMotion>,
+    windows: Query<'w, 's, &'static Window>,
+}
+
+/// 以 Avian 膠囊體掃描移動玩家、沿牆滑動並推動可移動家具；焦點離開或暫停時停止輸入。
 pub fn move_player(
-    time: Res<Time>,
-    mut keys: ResMut<ButtonInput<KeyCode>>,
-    mouse: Res<AccumulatedMouseMotion>,
-    windows: Query<&Window>,
-    solids: Query<&Solid>,
+    mut input: MoveInput,
+    spatial: SpatialQuery,
+    parents: Query<&ChildOf>,
+    mut pushables: Query<&mut LinearVelocity, With<Pushable>>,
     mut player: Query<(&mut Transform, &mut Player)>,
     mut session: ResMut<Session>,
 ) {
     let Ok((mut transform, mut look)) = player.single_mut() else {
         return;
     };
-    let focused = bridge::window_focused(windows.single().is_ok_and(|window| window.focused));
+    let focused = bridge::window_focused(input.windows.single().is_ok_and(|window| window.focused));
     if !focused && session.screen == Screen::Playing {
         session.screen = Screen::Paused;
     }
     if session.screen != Screen::Playing || !bridge::input_focused() {
-        keys.reset_all();
+        input.keys.reset_all();
         return;
     }
-    let dt = time.delta_secs().min(0.25);
-    let axis =
-        |positive, negative| f32::from(keys.pressed(positive)) - f32::from(keys.pressed(negative));
+    let dt = input.time.delta_secs().min(0.25);
+    let axis = |positive, negative| {
+        f32::from(input.keys.pressed(positive)) - f32::from(input.keys.pressed(negative))
+    };
     look.yaw -= axis(KeyCode::ArrowRight, KeyCode::ArrowLeft) * dt * 1.5;
     look.pitch += axis(KeyCode::ArrowUp, KeyCode::ArrowDown) * dt * 1.2;
     if bridge::pointer_locked() {
-        look.yaw -= mouse.delta.x * 0.0022;
-        look.pitch -= mouse.delta.y * 0.0022;
+        look.yaw -= input.mouse.delta.x * 0.0022;
+        look.pitch -= input.mouse.delta.y * 0.0022;
     }
     look.pitch = look.pitch.clamp(-1.25, 1.25);
     transform.rotation = Quat::from_euler(EulerRot::YXZ, look.yaw, look.pitch, 0.0);
@@ -106,49 +87,48 @@ pub fn move_player(
         0.0,
         -axis(KeyCode::KeyW, KeyCode::KeyS),
     );
-    let movement = Quat::from_rotation_y(look.yaw) * local.normalize_or_zero() * dt * 2.25;
-    let steps = (movement.length() / 0.1).ceil().max(1.0) as u32;
-    let movement = movement / steps as f32;
-    for displacement in (0..steps).flat_map(|_| [Vec3::X * movement.x, Vec3::Z * movement.z]) {
-        let next = transform.translation + displacement;
-        let inside_room = next.x.abs() < 4.23
-            && next.z > -4.23
-            && (next.z < 4.23
-                || (session.progress.door_is_open()
-                    && (0.95..2.65).contains(&next.x)
-                    && next.z < 7.0));
-        if inside_room && !solids.iter().any(|solid| solid.blocks(next)) {
-            transform.translation = next;
+    let mut remaining = Quat::from_rotation_y(look.yaw) * local.normalize_or_zero() * dt * 2.25;
+    let shape = Collider::capsule(PLAYER_RADIUS, PLAYER_CYLINDER_HEIGHT);
+    let filter = SpatialQueryFilter::from_mask([GameLayer::World, GameLayer::Furniture]);
+    for _ in 0..3 {
+        let distance = remaining.length();
+        if distance < 1e-5 {
+            break;
         }
+        let Ok(direction) = Dir3::new(remaining / distance) else {
+            break;
+        };
+        let origin = transform.translation + Vec3::Y * BODY_Y_OFFSET;
+        let config = ShapeCastConfig::from_max_distance(distance + COLLISION_SKIN);
+        let Some(hit) =
+            spatial.cast_shape(&shape, origin, Quat::IDENTITY, direction, &config, &filter)
+        else {
+            transform.translation += remaining;
+            break;
+        };
+        let mut current = Some(hit.entity);
+        while let Some(entity) = current {
+            if let Ok(mut velocity) = pushables.get_mut(entity) {
+                let push = Vec3::new(direction.x, 0.0, direction.z) * 2.4;
+                velocity.0.x = velocity.0.x.lerp(push.x, 0.65);
+                velocity.0.z = velocity.0.z.lerp(push.z, 0.65);
+                break;
+            }
+            current = parents.get(entity).ok().map(ChildOf::parent);
+        }
+        let travel = (hit.distance - COLLISION_SKIN).max(0.0);
+        transform.translation += *direction * travel;
+        let leftover = remaining - *direction * travel;
+        let mut normal = Vec3::new(hit.normal1.x, 0.0, hit.normal1.z);
+        if normal.length_squared() < 1e-5 {
+            break;
+        }
+        normal = normal.normalize();
+        remaining = leftover - normal * leftover.dot(normal);
     }
     if session.progress == Progress::DoorOpen && transform.translation.z > 5.65 {
         session.progress.apply(Action::Leave);
         session.screen = Screen::Won;
         session.notify(MessageKey::Escaped, SoundCue::Win);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn ray_hits_only_visible_faces_and_handles_parallel_directions() {
-        let solid = Solid {
-            center: Vec3::ZERO,
-            half: Vec3::ONE,
-        };
-        assert_eq!(
-            solid.ray_distance(Vec3::new(0.0, 0.0, 3.0), Vec3::NEG_Z),
-            Some(2.0)
-        );
-        assert_eq!(
-            solid.ray_distance(Vec3::new(2.0, 0.0, 3.0), Vec3::NEG_Z),
-            None
-        );
-        assert_eq!(solid.ray_distance(Vec3::new(0.0, 0.0, 3.0), Vec3::Z), None);
-        assert_eq!(solid.ray_distance(Vec3::ZERO, Vec3::X), Some(0.0));
-        assert!(solid.blocks(Vec3::new(1.2, 1.65, 0.0)));
-        assert!(!solid.blocks(Vec3::new(1.3, 1.65, 0.0)));
     }
 }

@@ -1,5 +1,9 @@
 use super::builder::Furnisher;
-use crate::interaction::Target;
+use crate::{
+    interaction::Target,
+    physics::{Grabbable, PropKind, prop_layers},
+};
+use avian3d::prelude::*;
 use bevy::prelude::*;
 
 /// 西牆 3:2 原創照片朝 +X，照片與 DOM 使用同一 JPEG；尺寸使用公尺。
@@ -25,12 +29,12 @@ pub(super) fn photograph(
         Transform::from_xyz(-4.22, 2.02, -1.0)
             .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
     ));
-    room.target([-4.1, 2.0, -1.0], Target::Photograph);
+    room.sensor([-4.22, 2.02, -1.0], [0.18, 1.26, 1.82], Target::Photograph);
     room.block([-4.13, 2.77, -1.0], [0.13, 0.055, 0.67], brass);
     room.light([-3.88, 2.66, -1.0], [1.0, 0.78, 0.50], 550.0, false);
 }
 
-/// 兩只杯子、筆、薄信與略轉的書本以公尺放置在既有桌面，不新增碰撞路線。
+/// 兩只杯子、筆、信封、可拿取精裝書與木盒，讓桌面兼具敘事感與物理互動。
 pub(super) fn keepsakes(
     room: &mut Furnisher,
     paper: &Handle<StandardMaterial>,
@@ -55,25 +59,72 @@ pub(super) fn keepsakes(
     }
     room.block([-0.28, 1.023, -2.59], [0.018, 0.017, 0.32], ink);
     room.block([-0.28, 1.023, -2.42], [0.022, 0.021, 0.07], brass);
-    for (at, size, material, angle) in [
-        ([-1.65, 1.058, -3.1], [0.46, 0.09, 0.30], rust, 0.16),
-        ([-1.65, 1.062, -3.1], [0.435, 0.063, 0.28], paper, 0.16),
-        ([-1.65, 1.111, -3.1], [0.46, 0.014, 0.30], rust, 0.16),
-        ([-0.66, 1.021, -3.18], [0.42, 0.008, 0.23], paper, -0.15),
-    ] {
-        let entity = room.block(at, size, material);
-        room.commands.entity(entity).insert(
-            Transform::from_translation(Vec3::from(at))
-                .with_scale(Vec3::from(size))
-                .with_rotation(Quat::from_rotation_y(angle)),
-        );
-    }
+    let letter_on_desk = room.block([-0.66, 1.021, -3.18], [0.42, 0.008, 0.23], paper);
+    room.commands.entity(letter_on_desk).insert(
+        Transform::from_xyz(-0.66, 1.021, -3.18)
+            .with_scale(Vec3::new(0.42, 0.008, 0.23))
+            .with_rotation(Quat::from_rotation_y(-0.15)),
+    );
+
+    let book_home =
+        Transform::from_xyz(-1.72, 1.06, -3.08).with_rotation(Quat::from_rotation_y(0.16));
+    let book = room
+        .commands
+        .spawn((
+            book_home,
+            Visibility::default(),
+            RigidBody::Dynamic,
+            SleepingDisabled,
+            Collider::cuboid(0.46, 0.09, 0.30),
+            Mass(PropKind::Book.mass_kg()),
+            LinearDamping(0.6),
+            AngularDamping(1.2),
+            prop_layers(),
+            Grabbable {
+                kind: PropKind::Book,
+                home: book_home,
+            },
+        ))
+        .id();
+    let cover_bottom = room.block([0.0, -0.038, 0.0], [0.46, 0.014, 0.30], rust);
+    let pages = room.block([0.0, 0.0, 0.0], [0.435, 0.063, 0.28], paper);
+    let cover_top = room.block([0.0, 0.038, 0.0], [0.46, 0.014, 0.30], rust);
+    room.commands
+        .entity(book)
+        .add_children(&[cover_bottom, pages, cover_top]);
+
+    let box_home =
+        Transform::from_xyz(0.08, 1.075, -2.56).with_rotation(Quat::from_rotation_y(-0.22));
+    let keepsake_box = room
+        .commands
+        .spawn((
+            box_home,
+            Visibility::default(),
+            RigidBody::Dynamic,
+            SleepingDisabled,
+            Collider::cuboid(0.24, 0.12, 0.19),
+            Mass(PropKind::Box.mass_kg()),
+            LinearDamping(0.6),
+            AngularDamping(1.2),
+            prop_layers(),
+            Grabbable {
+                kind: PropKind::Box,
+                home: box_home,
+            },
+        ))
+        .id();
+    let body = room.block([0.0, -0.01, 0.0], [0.24, 0.10, 0.19], wood);
+    let lid = room.block([0.0, 0.048, 0.0], [0.25, 0.022, 0.20], brass);
+    room.commands
+        .entity(keepsake_box)
+        .add_children(&[body, lid]);
+
     room.block([3.16, 0.91, -1.65], [0.035, 0.22, 0.43], paper);
     let seal = room.ellipsoid([3.132, 0.94, -1.65], [0.012, 0.044, 0.044], rust);
     room.commands
         .entity(seal)
         .insert(Name::new("Unsent letter wax seal"));
-    room.block([-2.65, 0.26, -3.62], [0.7, 0.52, 0.6], wood);
+    room.solid_block([-2.65, 0.26, -3.62], [0.7, 0.52, 0.6], wood);
     room.block([-2.65, 0.535, -3.62], [0.72, 0.03, 0.62], paper);
     room.block([-2.65, 0.554, -3.62], [0.04, 0.012, 0.65], brass);
 }

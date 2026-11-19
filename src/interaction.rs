@@ -1,9 +1,13 @@
 use crate::{
     Screen, Session,
-    player::{Player, START, Solid},
+    physics::{
+        self, Drawer, GameLayer, Grabbable, HeldProp, PhysicsReset, PropControlQuery, PropKind,
+    },
+    player::{Player, START},
     session::{Exhibit, SoundCue, UiCommand, UiCommands},
 };
-use bevy::prelude::*;
+use avian3d::prelude::*;
+use bevy::{ecs::system::SystemParam, prelude::*};
 use latch::{
     i18n::MessageKey,
     puzzle::{Action, Progress, Reply},
@@ -15,57 +19,118 @@ pub enum Target {
     Safe,
     Door,
     Photograph,
+    Plate,
 }
 
-impl Target {
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum FocusTarget {
+    Static(Target),
+    Drawer(Entity, bool),
+    Prop(Entity, PropKind),
+    Drop(PropKind),
+}
+
+impl FocusTarget {
     #[cfg(target_arch = "wasm32")]
-    /// 提供準星對準物件時的可執行動作文字。
+    /// 提供準星對準物件或手中持有道具時的可執行動作文字。
     pub fn label(self, progress: Progress) -> MessageKey {
         match self {
-            Self::Note => MessageKey::ReadNote,
-            Self::Safe if progress == Progress::SafeOpen => MessageKey::ReadLetter,
-            Self::Safe if progress.safe_is_open() => MessageKey::ViewSafe,
-            Self::Safe => MessageKey::EnterCode,
-            Self::Door if progress.door_is_open() => MessageKey::LeaveRoom,
-            Self::Door => MessageKey::OpenDoor,
-            Self::Photograph => MessageKey::ViewPhotograph,
+            Self::Drop(kind) => kind.drop_label(),
+            Self::Prop(_, kind) => kind.pick_label(),
+            Self::Drawer(_, open) => {
+                if open {
+                    MessageKey::CloseDrawer
+                } else {
+                    MessageKey::OpenDrawer
+                }
+            }
+            Self::Static(Target::Note) => MessageKey::ReadNote,
+            Self::Static(Target::Safe) if progress == Progress::SafeOpen => MessageKey::ReadLetter,
+            Self::Static(Target::Safe) if progress.safe_is_open() => MessageKey::ViewSafe,
+            Self::Static(Target::Safe) => MessageKey::EnterCode,
+            Self::Static(Target::Door) if progress.door_is_open() => MessageKey::LeaveRoom,
+            Self::Static(Target::Door) => MessageKey::OpenDoor,
+            Self::Static(Target::Photograph) => MessageKey::ViewPhotograph,
+            Self::Static(Target::Plate) => MessageKey::InspectPlate,
         }
     }
 }
 
 #[derive(Resource, Default)]
-pub struct Focus(pub Option<Target>);
+pub struct Focus(pub Option<FocusTarget>);
 
-/// 只選取三公尺內、準星附近且未被實體遮擋的互動節點。
+#[derive(SystemParam)]
+pub struct FocusLookup<'w, 's> {
+    targets: Query<'w, 's, &'static Target>,
+    drawers: Query<'w, 's, &'static Drawer>,
+    props: Query<'w, 's, &'static Grabbable>,
+    parents: Query<'w, 's, &'static ChildOf>,
+}
+
+#[derive(SystemParam)]
+pub struct WorldAct<'w, 's> {
+    commands: Commands<'w, 's>,
+    reset: ResMut<'w, PhysicsReset>,
+    held: ResMut<'w, HeldProp>,
+    drawers: Query<'w, 's, &'static mut Drawer>,
+    props: PropControlQuery<'w, 's>,
+}
+
+/// 以 Avian 射線選取準星三點二公尺內的首個可互動物件；小道具提供窄球體輔助瞄準。
 pub fn focus_target(
+    spatial: SpatialQuery,
+    held: Res<HeldProp>,
     player: Query<&Transform, With<Player>>,
-    targets: Query<(&Transform, &Target), Without<Player>>,
-    solids: Query<&Solid>,
+    lookup: FocusLookup,
     mut focus: ResMut<Focus>,
 ) {
     focus.0 = None;
+    if let Some((_, kind)) = held.0 {
+        focus.0 = Some(FocusTarget::Drop(kind));
+        return;
+    }
     let Ok(camera) = player.single() else { return };
     let origin = camera.translation;
-    let forward = *camera.forward();
-    let mut nearest = 3.2_f32;
-    for (transform, target) in &targets {
-        let offset = transform.translation - origin;
-        let along = offset.dot(forward);
-        let miss = (offset - forward * along).length();
-        if along < 0.0 || along > nearest || miss > 0.42 {
-            continue;
+    let forward = Dir3::new_unchecked(*camera.forward());
+    let filter = SpatialQueryFilter::from_mask([
+        GameLayer::World,
+        GameLayer::Prop,
+        GameLayer::Furniture,
+        GameLayer::Interactable,
+    ]);
+    let ray_hit = spatial.cast_ray(origin, forward, 3.2, true, &filter);
+    if let Some(hit) = ray_hit {
+        let mut current = Some(hit.entity);
+        while let Some(entity) = current {
+            if let Ok(prop) = lookup.props.get(entity) {
+                focus.0 = Some(FocusTarget::Prop(entity, prop.kind));
+                return;
+            }
+            if let Ok(drawer) = lookup.drawers.get(entity) {
+                focus.0 = Some(FocusTarget::Drawer(entity, drawer.open));
+                return;
+            }
+            if let Ok(target) = lookup.targets.get(entity) {
+                focus.0 = Some(FocusTarget::Static(*target));
+                return;
+            }
+            current = lookup.parents.get(entity).ok().map(ChildOf::parent);
         }
-        let distance = offset.length();
-        let direction = offset / distance;
-        let occluded = solids.iter().any(|solid| {
-            solid
-                .ray_distance(origin, direction)
-                .is_some_and(|hit| hit + 0.48 < distance)
-        });
-        if !occluded {
-            nearest = along;
-            focus.0 = Some(*target);
-        }
+    }
+    let max_prop_distance = ray_hit.map_or(3.2, |hit| (hit.distance + 0.08).min(3.2));
+    let prop_filter = SpatialQueryFilter::from_mask([GameLayer::Prop]);
+    let probe = Collider::sphere(0.08);
+    let config = ShapeCastConfig::from_max_distance(max_prop_distance);
+    if let Some(hit) = spatial.cast_shape(
+        &probe,
+        origin,
+        Quat::IDENTITY,
+        forward,
+        &config,
+        &prop_filter,
+    ) && let Ok(prop) = lookup.props.get(hit.entity)
+    {
+        focus.0 = Some(FocusTarget::Prop(hit.entity, prop.kind));
     }
 }
 
@@ -73,6 +138,7 @@ pub fn focus_target(
 pub fn act(
     mut commands: ResMut<UiCommands>,
     mut session: ResMut<Session>,
+    mut world: WorldAct,
     focus: Res<Focus>,
     keys: Res<ButtonInput<KeyCode>>,
     mut player: Query<(&mut Transform, &mut Player)>,
@@ -99,6 +165,7 @@ pub fn act(
                 session.progress.apply(Action::Restart);
                 session.screen = Screen::Playing;
                 session.notify(MessageKey::Restarted, SoundCue::Start);
+                world.reset.0 = true;
                 if let Ok((mut transform, mut look)) = player.single_mut() {
                     transform.translation = START;
                     look.yaw = 0.0;
@@ -117,11 +184,15 @@ pub fn act(
                         session.screen = Screen::Playing;
                         session.notify(MessageKey::SafeUnlocked, SoundCue::Unlock);
                     }
+                    Some(Reply::LatchLocked) => {
+                        session.screen = Screen::Playing;
+                        session.notify(MessageKey::LatchLocked, SoundCue::Wrong);
+                    }
                     _ => session.notify(MessageKey::IncorrectCode, SoundCue::Wrong),
                 }
             }
             UiCommand::Interact if session.screen == Screen::Playing => {
-                interact(&mut session, focus.0);
+                interact(&mut session, &mut world, focus.0);
             }
             _ => {}
         }
@@ -129,19 +200,55 @@ pub fn act(
 }
 
 /// 將目前準星目標套用為遊戲動作；重複互動由 reducer 的進度處理。
-fn interact(session: &mut Session, target: Option<Target>) {
+fn interact(session: &mut Session, world: &mut WorldAct, target: Option<FocusTarget>) {
     match target {
-        Some(Target::Note) => session.screen = Screen::Inspect(Exhibit::Note),
-        Some(Target::Safe) if session.progress == Progress::Searching => {
-            session.screen = Screen::Safe
+        Some(FocusTarget::Drop(_)) => {
+            physics::drop_held(&mut world.commands, &mut world.held, &mut world.props);
         }
-        Some(Target::Safe) => session.screen = Screen::Inspect(Exhibit::Letter),
-        Some(Target::Door) => match session.progress.apply(Action::UnlockDoor) {
+        Some(FocusTarget::Prop(entity, kind)) => {
+            physics::pick_up(
+                &mut world.commands,
+                &mut world.held,
+                entity,
+                kind,
+                &mut world.props,
+            );
+        }
+        Some(FocusTarget::Drawer(entity, _)) => {
+            if let Ok(mut drawer) = world.drawers.get_mut(entity) {
+                drawer.open = !drawer.open;
+                let message = if drawer.open {
+                    MessageKey::DrawerOpened
+                } else {
+                    MessageKey::DrawerClosed
+                };
+                session.notify(message, SoundCue::Tap);
+            }
+        }
+        Some(FocusTarget::Static(Target::Note)) => {
+            session.screen = Screen::Inspect(Exhibit::Note);
+        }
+        Some(FocusTarget::Static(Target::Safe)) if session.progress == Progress::Searching => {
+            session.notify(MessageKey::LatchLocked, SoundCue::Wrong);
+        }
+        Some(FocusTarget::Static(Target::Safe)) if session.progress == Progress::LatchReleased => {
+            session.screen = Screen::Safe;
+        }
+        Some(FocusTarget::Static(Target::Safe)) => {
+            session.screen = Screen::Inspect(Exhibit::Letter);
+        }
+        Some(FocusTarget::Static(Target::Door)) => match session.progress.apply(Action::UnlockDoor)
+        {
             Reply::DoorUnlocked => session.notify(MessageKey::DoorUnlocked, SoundCue::Unlock),
             Reply::NeedKey => session.notify(MessageKey::NeedKey, SoundCue::Wrong),
             _ => session.notify(MessageKey::DoorAlreadyOpen, SoundCue::Tap),
         },
-        Some(Target::Photograph) => session.screen = Screen::Inspect(Exhibit::Photograph),
+        Some(FocusTarget::Static(Target::Photograph)) => {
+            session.screen = Screen::Inspect(Exhibit::Photograph);
+        }
+        Some(FocusTarget::Static(Target::Plate)) => {
+            session.notify(MessageKey::PlateHint, SoundCue::Tap);
+        }
         None => {}
     }
 }
