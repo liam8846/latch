@@ -2,8 +2,8 @@ use super::{BalanceBeam, BalanceCounterPan, Hinge, Key, builder::Furnisher, mate
 use crate::{
     interaction::Target,
     physics::{
-        Drawer, Grabbable, LatchBolt, PressurePlate, PropKind, Pushable, furniture_layers,
-        prop_layers, world_layers,
+        Drawer, Grabbable, LatchBolt, PlateKind, PressurePlate, PropKind, Pushable,
+        furniture_layers, prop_layers, world_layers,
     },
 };
 use avian3d::prelude::*;
@@ -283,6 +283,7 @@ pub(super) fn balance_corner(room: &mut Furnisher, assets: &AssetServer, palette
             world_layers(),
             Target::Plate,
             PressurePlate {
+                kind: PlateKind::StudyBalance,
                 center: Vec3::new(3.80, 1.00, 0.42),
                 half: Vec3::new(0.18, 0.06, 0.18),
                 base_y: 1.00,

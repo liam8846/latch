@@ -30,7 +30,9 @@ pub enum Target {
     MailStack,
     PostageChart,
     Timetable,
+    MoonMark,
     Lever(Lever),
+    FoyerPlate,
     FrontDoor,
     Mailbox,
     CoatRack,
@@ -76,9 +78,12 @@ impl FocusTarget {
             Self::Static(Target::MailStack) => MessageKey::InspectMailStack,
             Self::Static(Target::PostageChart) => MessageKey::InspectPostageChart,
             Self::Static(Target::Timetable) => MessageKey::ReadTimetable,
-            Self::Static(Target::Lever(Lever::Coast)) => MessageKey::PullLeverCoast,
-            Self::Static(Target::Lever(Lever::Harbor)) => MessageKey::PullLeverHarbor,
-            Self::Static(Target::Lever(Lever::Station)) => MessageKey::PullLeverStation,
+            Self::Static(Target::MoonMark) => MessageKey::ReadMoonMark,
+            Self::Static(Target::Lever(Lever::One)) => MessageKey::PullLeverOne,
+            Self::Static(Target::Lever(Lever::Two)) => MessageKey::PullLeverTwo,
+            Self::Static(Target::Lever(Lever::Three)) => MessageKey::PullLeverThree,
+            Self::Static(Target::Lever(Lever::Four)) => MessageKey::PullLeverFour,
+            Self::Static(Target::FoyerPlate) => MessageKey::InspectFoyerPlate,
             Self::Static(Target::FrontDoor) if progress.front_door_is_open() => {
                 MessageKey::LeaveHouse
             }
@@ -328,11 +333,28 @@ fn interact(session: &mut Session, world: &mut WorldAct, target: Option<FocusTar
         Some(FocusTarget::Static(Target::Timetable)) => {
             session.screen = Screen::Inspect(Exhibit::Timetable);
         }
+        Some(FocusTarget::Static(Target::MoonMark)) => {
+            let foyer_dark = world
+                .lights
+                .iter()
+                .any(|(light, _)| light.kind == LightKind::FoyerLamp && !light.on);
+            if foyer_dark {
+                session.screen = Screen::Inspect(Exhibit::MoonMark);
+            } else {
+                session.notify(MessageKey::MoonMarkTooBright, SoundCue::Tap);
+            }
+        }
+        Some(FocusTarget::Static(Target::FoyerPlate)) => {
+            session.notify(MessageKey::FoyerPlateHint, SoundCue::Tap);
+        }
         Some(FocusTarget::Static(Target::Lever(lever))) => {
             if session.progress == Progress::DoorOpen {
                 session.progress.apply(Action::EnterFoyer);
             }
             match session.progress.apply(Action::PullLever(lever)) {
+                Reply::FoyerChainSlack => {
+                    session.notify(MessageKey::FoyerChainSlack, SoundCue::Wrong);
+                }
                 Reply::LeverEngaged => {
                     session.notify(MessageKey::LeverEngaged, SoundCue::Tap);
                 }
@@ -371,7 +393,7 @@ fn interact(session: &mut Session, world: &mut WorldAct, target: Option<FocusTar
     }
 }
 
-/// 切換指定書房光源的開關狀態，同步更新點光源強度與提示訊息。
+/// 切換同類型所有書房或玄關光源的開關狀態，同步更新點光源強度與提示訊息。
 fn toggle_light(
     session: &mut Session,
     lights: &mut Query<(&mut SwitchableLight, &mut PointLight)>,
@@ -379,23 +401,15 @@ fn toggle_light(
     on_message: MessageKey,
     off_message: MessageKey,
 ) {
+    let mut next_state = None;
     for (mut switchable, mut point) in lights.iter_mut() {
         if switchable.kind == kind {
-            switchable.on = !switchable.on;
-            point.intensity = if switchable.on {
-                switchable.intensity
-            } else {
-                0.0
-            };
-            session.notify(
-                if switchable.on {
-                    on_message
-                } else {
-                    off_message
-                },
-                SoundCue::Tap,
-            );
-            break;
+            let on = *next_state.get_or_insert(!switchable.on);
+            switchable.on = on;
+            point.intensity = if on { switchable.intensity } else { 0.0 };
         }
+    }
+    if let Some(on) = next_state {
+        session.notify(if on { on_message } else { off_message }, SoundCue::Tap);
     }
 }

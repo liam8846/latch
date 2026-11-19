@@ -4,7 +4,11 @@ mod foyer;
 mod furniture;
 mod materials;
 
-use crate::{Session, interaction::Target, physics::PressurePlate};
+use crate::{
+    Session,
+    interaction::Target,
+    physics::{PlateKind, PressurePlate},
+};
 use bevy::prelude::*;
 use builder::Furnisher;
 use furniture::{balance_corner, chair, desk_drawer, exit, safe, shelves};
@@ -22,6 +26,9 @@ pub struct LeverHinge(pub Lever);
 
 #[derive(Component)]
 pub struct Key;
+
+#[derive(Component)]
+pub struct MoonMark;
 
 #[derive(Component)]
 pub struct BalanceBeam;
@@ -248,12 +255,18 @@ type BalanceAnimateQueries<'w, 's> = (
     >,
 );
 
-/// 以秒步長逼近門板角度、天平橫樑與玄關拉桿；呈現完全由唯一謎題進度導出。
+type VisibilityAnimateQueries<'w, 's> = (
+    Query<'w, 's, &'static mut Visibility, (With<Key>, Without<MoonMark>)>,
+    Query<'w, 's, &'static mut Visibility, (With<MoonMark>, Without<Key>)>,
+    Query<'w, 's, &'static SwitchableLight>,
+);
+
+/// 以秒步長逼近門板角度、天平橫樑與玄關拉桿，並同步鑰匙與熄燈夜光暗記的可見度。
 pub fn animate(
     time: Res<Time>,
     session: Res<Session>,
     mut hinges: Query<(&Hinge, &mut Transform)>,
-    mut keys: Query<&mut Visibility, With<Key>>,
+    mut visibility_queries: VisibilityAnimateQueries,
     mut balance: BalanceAnimateQueries,
 ) {
     let dt = time.delta_secs().min(0.1);
@@ -272,9 +285,13 @@ pub fn animate(
             transform.rotation = transform.rotation.slerp(target, 1.0 - (-dt * 5.0).exp());
         }
     }
-    let ratio = balance.0.iter().next().map_or(0.0, |(plate, transform)| {
-        ((plate.base_y - transform.translation.y) / plate.travel).clamp(0.0, 1.0)
-    });
+    let ratio = balance
+        .0
+        .iter()
+        .find(|(plate, _)| plate.kind == PlateKind::StudyBalance)
+        .map_or(0.0, |(plate, transform)| {
+            ((plate.base_y - transform.translation.y) / plate.travel).clamp(0.0, 1.0)
+        });
     let tilt = Quat::from_rotation_x(0.18 + (-0.04 - 0.18) * ratio);
     for mut transform in &mut balance.1 {
         if transform.rotation.angle_between(tilt) > 1e-4 {
@@ -297,7 +314,7 @@ pub fn animate(
             transform.rotation = transform.rotation.slerp(target, 1.0 - (-dt * 9.0).exp());
         }
     }
-    for mut visibility in &mut keys {
+    for mut visibility in &mut visibility_queries.0 {
         let next = if session.progress == Progress::SafeOpen {
             Visibility::Visible
         } else {
@@ -305,6 +322,20 @@ pub fn animate(
         };
         if *visibility != next {
             *visibility = next;
+        }
+    }
+    let foyer_dark = visibility_queries
+        .2
+        .iter()
+        .any(|light| light.kind == LightKind::FoyerLamp && !light.on);
+    let mark_vis = if foyer_dark {
+        Visibility::Visible
+    } else {
+        Visibility::Hidden
+    };
+    for mut visibility in &mut visibility_queries.1 {
+        if *visibility != mark_vis {
+            *visibility = mark_vis;
         }
     }
 }

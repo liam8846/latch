@@ -1,9 +1,12 @@
 use super::{
-    Hinge, LeverHinge, LightKind, SwitchableLight, builder::Furnisher, materials::Palette,
+    Hinge, LeverHinge, LightKind, MoonMark, SwitchableLight, builder::Furnisher, materials::Palette,
 };
 use crate::{
     interaction::Target,
-    physics::{Pushable, furniture_layers, world_layers},
+    physics::{
+        Grabbable, PlateKind, PressurePlate, PropKind, Pushable, furniture_layers, prop_layers,
+        world_layers,
+    },
 };
 use avian3d::prelude::*;
 use bevy::prelude::*;
@@ -14,9 +17,9 @@ pub(super) fn setup(room: &mut Furnisher, assets: &AssetServer, palette: &Palett
     corridor(room, palette);
     shell(room, palette);
     blocking_crate_and_timetable(room, assets, palette);
-    lever_panel(room, palette);
+    lever_panel_and_chain_cradle(room, palette);
     foyer_props(room, assets, palette);
-    front_door(room, palette);
+    front_door_and_moon_mark(room, palette);
 }
 
 /// 建立連接書房與玄關的月光木廊（Z 4.6 至 7.0 公尺）。
@@ -57,7 +60,7 @@ fn shell(room: &mut Furnisher, palette: &Palette) {
     room.block([0.5, 0.054, 10.4], [2.04, 0.008, 4.04], &palette.rust);
 }
 
-/// 在玄關西牆建立被可推動木箱遮住的舊鐵道停靠時刻表，推開木箱即可細讀。
+/// 在玄關西牆建立被可推動木箱遮住的舊鐵道月台時刻表，推開木箱即可細讀。
 fn blocking_crate_and_timetable(room: &mut Furnisher, assets: &AssetServer, palette: &Palette) {
     room.block([-2.46, 0.72, 10.1], [0.04, 0.56, 0.72], &palette.walnut);
     room.block([-2.435, 0.72, 10.1], [0.02, 0.48, 0.64], &palette.cream);
@@ -109,40 +112,64 @@ fn blocking_crate_and_timetable(room: &mut Furnisher, assets: &AssetServer, pale
         .add_children(&[lower_mesh, upper_chest, upper_band, collider]);
 }
 
-/// 在玄關東牆建立三道黃銅門栓拉桿（港灣、站台、海岸），附連通至臨街大門的銅導管。
-fn lever_panel(room: &mut Furnisher, palette: &Palette) {
-    room.block([3.46, 1.38, 10.2], [0.08, 0.68, 1.42], &palette.walnut);
-    room.block([3.41, 1.38, 10.2], [0.03, 0.56, 1.30], &palette.steel);
-    room.block([3.44, 1.38, 12.15], [0.05, 0.05, 2.65], &palette.brass);
-    room.block([2.45, 1.38, 13.45], [2.05, 0.05, 0.05], &palette.brass);
+/// 在玄關東牆建立四道編號黃銅拉桿（I–IV）與下方銅鏈承重托台，須先加壓繃緊銅鏈才可咬合。
+fn lever_panel_and_chain_cradle(room: &mut Furnisher, palette: &Palette) {
+    room.block([3.46, 1.48, 10.2], [0.08, 0.70, 1.84], &palette.walnut);
+    room.block([3.41, 1.48, 10.2], [0.03, 0.58, 1.72], &palette.steel);
+    room.block([3.44, 1.48, 12.25], [0.05, 0.05, 2.45], &palette.brass);
+    room.block([2.45, 1.48, 13.45], [2.05, 0.05, 0.05], &palette.brass);
 
-    for (lever, z, bar_width) in [
-        (Lever::Harbor, 9.76, 0.14),
-        (Lever::Station, 10.20, 0.22),
-        (Lever::Coast, 10.64, 0.08),
+    for (lever, z, ticks) in [
+        (Lever::One, 9.54, 1_usize),
+        (Lever::Two, 9.98, 2),
+        (Lever::Three, 10.42, 3),
+        (Lever::Four, 10.86, 4),
     ] {
-        room.block([3.39, 1.58, z], [0.015, 0.05, bar_width], &palette.brass);
-        room.block([3.39, 1.38, z], [0.02, 0.30, 0.06], &palette.ink);
+        let span = (ticks - 1) as f32 * 0.032;
+        for t in 0..ticks {
+            let tz = z - span * 0.5 + t as f32 * 0.032;
+            room.block([3.39, 1.68, tz], [0.014, 0.075, 0.014], &palette.brass);
+        }
+        room.block([3.39, 1.46, z], [0.02, 0.30, 0.06], &palette.ink);
         let pivot = room
             .commands
             .spawn((
-                Transform::from_xyz(3.38, 1.38, z).with_rotation(Quat::from_rotation_z(-0.55)),
+                Transform::from_xyz(3.38, 1.46, z).with_rotation(Quat::from_rotation_z(-0.55)),
                 Visibility::default(),
                 LeverHinge(lever),
             ))
             .id();
         let shaft = room.block([-0.11, 0.0, 0.0], [0.22, 0.032, 0.032], &palette.brass);
-        let knob = room.ellipsoid([-0.22, 0.0, 0.0], [0.042, 0.042, 0.042], &palette.wood);
+        let knob = room.ellipsoid([-0.22, 0.0, 0.0], [0.04, 0.04, 0.04], &palette.wood);
         room.commands.entity(pivot).add_children(&[shaft, knob]);
-        room.sensor([3.26, 1.38, z], [0.30, 0.44, 0.34], Target::Lever(lever));
+        room.sensor([3.26, 1.46, z], [0.30, 0.44, 0.32], Target::Lever(lever));
     }
+
+    room.solid_block([3.20, 0.25, 10.20], [0.54, 0.50, 0.62], &palette.walnut);
+    for dz in [-0.18_f32, 0.18] {
+        room.cylinder([3.26, 0.86, 10.20 + dz], 0.012, 0.60, &palette.brass);
+    }
+    let cradle = room.block([3.20, 0.54, 10.20], [0.44, 0.045, 0.50], &palette.brass);
+    room.commands.entity(cradle).insert((
+        RigidBody::Kinematic,
+        Collider::cuboid(1.0, 1.0, 1.0),
+        world_layers(),
+        Target::FoyerPlate,
+        PressurePlate {
+            kind: PlateKind::FoyerChain,
+            center: Vec3::new(3.20, 0.54, 10.20),
+            half: Vec3::new(0.24, 0.06, 0.27),
+            base_y: 0.54,
+            travel: 0.045,
+        },
+    ));
 }
 
-/// 建立玄關信箱、衣帽架與黑傘、邊桌盆栽與可切換的壁燈與主廊燈。
+/// 建立玄關信箱、衣帽架、可拿取鑄鐵門擋、邊桌盆栽與連動的玄關燈具。
 fn foyer_props(room: &mut Furnisher, assets: &AssetServer, palette: &Palette) {
-    room.block([-1.05, 1.28, 13.44], [0.34, 0.42, 0.14], &palette.steel);
-    room.block([-1.05, 1.40, 13.36], [0.26, 0.04, 0.03], &palette.brass);
-    room.sensor([-1.05, 1.28, 13.40], [0.40, 0.48, 0.22], Target::Mailbox);
+    room.block([-1.18, 1.28, 13.44], [0.34, 0.42, 0.14], &palette.steel);
+    room.block([-1.18, 1.40, 13.36], [0.26, 0.04, 0.03], &palette.brass);
+    room.sensor([-1.18, 1.28, 13.40], [0.40, 0.48, 0.22], Target::Mailbox);
 
     room.cylinder([-1.95, 0.03, 12.85], 0.26, 0.05, &palette.walnut);
     room.cylinder([-1.95, 0.96, 12.85], 0.036, 1.86, &palette.walnut);
@@ -162,6 +189,32 @@ fn foyer_props(room: &mut Furnisher, assets: &AssetServer, palette: &Palette) {
     room.cylinder([-1.75, 0.45, 12.88], 0.026, 0.86, &palette.ink);
     room.static_box([-1.95, 0.95, 12.85], [0.54, 1.90, 0.54]);
     room.sensor([-1.95, 1.05, 12.85], [0.64, 1.90, 0.64], Target::CoatRack);
+
+    let stop_home = Transform::from_xyz(-1.45, 0.09, 12.45);
+    let doorstop = room
+        .commands
+        .spawn((
+            stop_home,
+            Visibility::default(),
+            RigidBody::Dynamic,
+            SleepingDisabled,
+            Collider::cuboid(0.20, 0.15, 0.16),
+            Mass(PropKind::Doorstop.mass_kg()),
+            LinearDamping(0.8),
+            AngularDamping(1.5),
+            prop_layers(),
+            Grabbable {
+                kind: PropKind::Doorstop,
+                home: stop_home,
+            },
+        ))
+        .id();
+    let stop_body = room.block([0.0, -0.015, 0.0], [0.20, 0.12, 0.16], &palette.steel);
+    let stop_cap = room.block([0.0, 0.052, 0.0], [0.14, 0.025, 0.11], &palette.brass);
+    let stop_ring = room.cylinder([0.0, 0.088, 0.0], 0.028, 0.045, &palette.brass);
+    room.commands
+        .entity(doorstop)
+        .add_children(&[stop_body, stop_cap, stop_ring]);
 
     room.model(
         assets,
@@ -188,7 +241,12 @@ fn foyer_props(room: &mut Furnisher, assets: &AssetServer, palette: &Palette) {
         intensity: 950.0,
     });
 
-    room.light([0.5, 2.55, 10.3], [0.85, 0.82, 0.72], 1250.0, false);
+    let lantern = room.light([0.5, 2.55, 10.3], [0.85, 0.82, 0.72], 1250.0, false);
+    room.commands.entity(lantern).insert(SwitchableLight {
+        kind: LightKind::FoyerLamp,
+        on: true,
+        intensity: 1250.0,
+    });
     room.model(
         assets,
         "models/lantern_chandelier_01/lantern_chandelier_01_1k.gltf",
@@ -198,8 +256,30 @@ fn foyer_props(room: &mut Furnisher, assets: &AssetServer, palette: &Palette) {
     );
 }
 
-/// 建立南側臨街大門（隨鉸鏈旋轉的碰撞體）與門外星夜門廊。
-fn front_door(room: &mut Furnisher, palette: &Palette) {
+/// 建立南側臨街大門、熄燈後顯現的夜光塗漆暗記與門外星夜門廊。
+fn front_door_and_moon_mark(room: &mut Furnisher, palette: &Palette) {
+    let glow_paint = room.materials.add(StandardMaterial {
+        base_color: Color::srgb(0.45, 0.76, 1.0),
+        emissive: LinearRgba::rgb(0.42, 0.92, 1.95),
+        ..default()
+    });
+    for (dy, width) in [
+        (0.11_f32, 0.26_f32),
+        (0.03, 0.22),
+        (-0.05, 0.28),
+        (-0.13, 0.18),
+    ] {
+        let stroke = room.block(
+            [-0.74, 1.44 + dy, 13.48],
+            [width, 0.022, 0.008],
+            &glow_paint,
+        );
+        room.commands
+            .entity(stroke)
+            .insert((MoonMark, Visibility::Hidden));
+    }
+    room.sensor([-0.74, 1.44, 13.44], [0.36, 0.40, 0.16], Target::MoonMark);
+
     for x in [-0.46, 1.46] {
         room.block([x, 1.28, 13.48], [0.14, 2.56, 0.22], &palette.walnut);
     }

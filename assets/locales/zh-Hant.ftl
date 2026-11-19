@@ -80,8 +80,10 @@ notice-door-unlocked = 鑰匙轉動。門外的長廊連著玄關。
 notice-need-key = 門鎖住了。
 notice-door-open = 門已打開，走向門外的玄關。
 notice-foyer-entered = 門外是老宅的玄關。臨街的大門還上了暗栓。
+notice-foyer-chain-engaged = 銅鏈受重繃緊，拉桿箱內傳來齒輪咬合的聲響。
+notice-foyer-chain-slack = 拉桿空轉彈回，下方的銅鏈沒有受力。
 notice-lever-engaged = 黃銅拉桿扣下，牆內傳來一聲沉實的咬合。
-notice-levers-reset = 順序不對，三道拉桿齊聲彈回原位。
+notice-levers-reset = 順序不對，四道拉桿齊聲彈回原位。
 notice-front-door-unlocked = 最後一道門栓鬆脫，臨街大門向夜色敞開。
 notice-front-door-locked = 大門被內側的連動門栓鎖住了。
 notice-front-door-open = 大門已經敞開，走進夜色裡吧。
@@ -106,10 +108,12 @@ target-pick-paperweight = 拿起黃銅鎮紙
 target-pick-book = 拿起精裝書
 target-pick-box = 拿起木盒
 target-pick-vase = 拿起黃銅瓶
+target-pick-doorstop = 拿起鑄鐵門擋
 target-drop-paperweight = 放下黃銅鎮紙
 target-drop-book = 放下精裝書
 target-drop-box = 放下木盒
 target-drop-vase = 放下黃銅瓶
+target-drop-doorstop = 放下鑄鐵門擋
 target-lamp = 開關油燈
 target-switch = 切換吊燈開關
 target-teacups = 查看茶杯
@@ -119,28 +123,33 @@ target-weight-box = 查看砝碼盒
 target-mail-stack = 查看舊信封
 target-postage-chart = 閱讀郵資表
 target-timetable = 閱讀舊時刻表
-target-lever-coast = 撥動拉桿 · 海岸
-target-lever-harbor = 撥動拉桿 · 港灣
-target-lever-station = 撥動拉桿 · 站台
+target-moon-mark = 辨認夜光刻痕
+target-lever-one = 撥動拉桿 I
+target-lever-two = 撥動拉桿 II
+target-lever-three = 撥動拉桿 III
+target-lever-four = 撥動拉桿 IV
+target-foyer-plate = 查看銅鏈托台
 target-front-door = 檢視臨街大門
 target-leave-house = 步入夜色
 target-mailbox = 查看玄關信箱
 target-coat-rack = 查看衣帽架
-target-foyer-light = 開關玄關壁燈
+target-foyer-light = 開關玄關燈
 notice-lamp-on = 油燈重新亮起暖光。
 notice-lamp-off = 油燈熄滅了，桌角沉入月色。
 notice-chandelier-on = 中央吊燈亮了起來。
 notice-chandelier-off = 吊燈關上了，房間只剩月色與微光。
-notice-foyer-light-on = 玄關壁燈亮起微暖的光。
-notice-foyer-light-off = 玄關壁燈熄滅了。
+notice-foyer-light-on = 玄關的燈重新亮起。
+notice-foyer-light-off = 玄關陷入月色，南牆大門旁浮現出微弱的淡藍光痕。
 notice-teacups = 兩只杯子都涼透了，其中一只杯緣還留著淡淡茶漬。
 notice-crate = 箱子封了一半，麻繩還沒打結。裡面疊著幾本沒帶走的舊書。
 notice-bookshelf = 幾本翻舊的鐵道時刻表夾在詩集裡，書脊早已磨白。
 notice-weight-box = 一隻標準砝碼木盒，最大號的黃銅砝碼槽空著。
 notice-mail-stack = 幾封貼好郵票、尚未封蠟的舊信封，收件處寫著海邊站台。
 notice-postage-chart = 泛黃的郵資秤重表，旁註寫著：「厚信與書包皆須先過秤。」
-notice-mailbox = 信箱裡剩下一張褪色的海濱線單程車票存根，邊角已被反覆折疊。
-notice-coat-rack = 大衣已經收走了，只剩一把舊黑傘安靜地靠在架邊。
+notice-mailbox = 信箱裡夾著半截褪色車票，背面用淺粉筆寫著：「熄了玄關的燈，門邊的暗記才看得清。」
+notice-coat-rack = 大衣已經收走了，只剩一把舊黑傘靠在架邊，腳邊放著沉重的鑄鐵門擋。
+notice-foyer-plate-hint = 一座連著拉桿箱銅鏈的小托台，現在還鬆弛懸空著。
+notice-moon-mark-bright = 玄關燈太亮，牆面只看得到淡淡的塗漆痕跡。
 inventory-empty = 尚未取得物品
 inventory-key = 黃銅鑰匙 · 一封信
 note-caption = 紙角有一道熟悉的摺痕。
@@ -166,13 +175,20 @@ letter-take = 收好信，拿起鑰匙 ↗
 target-letter = 閱讀未寄出的信
 target-photograph = 端詳站台照片
 timetable-eyebrow = 玄關西牆 · 1947 海濱支線
-timetable-title = 末班夜車停靠表
-timetable-copy = 21:15  海岸（Coast）  — 始發月台
-    21:40  港灣（Harbor） — 轉乘停靠
-    22:05  站台（Station）— 海邊終點
+timetable-title = 月台發車時刻表
+timetable-copy = 月台  I（港灣）：去程 21:40  ｜  回程 23:10
+    月台 II（燈塔）：去程 21:55  ｜  回程 22:50
+    月台 III（海岸）：去程 21:15  ｜  回程 23:30
+    月台 IV（站台）：去程 22:10  ｜  回程 22:35
 
-    「出門前，照著夜車走過的那條路收好門栓。」
+    各月台與東牆門栓編號相應。
 timetable-caption = 原本被木箱擋在牆角，邊緣仍留著鉛筆畫下的記號。
+moonmark-eyebrow = 南牆暗處 · 夜光塗漆
+moonmark-title = 留給夜行人的順序
+moonmark-copy = 「別再搭 21:15 那班往海邊的去程了。
+    從 22:35 踏上回程末班，
+    依停靠先後扳下門栓，大門就會放你走。」
+moonmark-caption = 只有在熄燈後的月色裡，這幾行淡藍字跡才會顯現。
 
 error-renderer = 繪圖已停止。請重新載入再試一次；若仍失敗，請提供下方的診斷資訊。
 error-diagnostics = 診斷資訊

@@ -225,6 +225,7 @@ impl BrowserUi {
             Exhibit::Photograph => "photograph",
             Exhibit::Letter => "letter",
             Exhibit::Timetable => "timetable",
+            Exhibit::MoonMark => "moonmark",
         };
         for part in ["title", "eyebrow", "copy", "caption"] {
             self.dom.text(
@@ -304,9 +305,11 @@ fn objective(progress: Progress) -> MessageKey {
         Progress::SafeOpen => MessageKey::ObjectiveSafe,
         Progress::KeyHeld => MessageKey::ObjectiveKey,
         Progress::DoorOpen => MessageKey::ObjectiveDoor,
-        Progress::FoyerEntered | Progress::FoyerFirst | Progress::FoyerSecond => {
-            MessageKey::ObjectiveFoyer
-        }
+        Progress::FoyerEntered
+        | Progress::FoyerPowered
+        | Progress::FoyerStep1
+        | Progress::FoyerStep2
+        | Progress::FoyerStep3 => MessageKey::ObjectiveFoyer,
         Progress::FrontDoorOpen => MessageKey::ObjectiveFrontDoor,
         Progress::Escaped => MessageKey::ObjectiveEscaped,
     }

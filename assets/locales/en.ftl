@@ -83,8 +83,10 @@ notice-door-unlocked = The key turns. Beyond the study lies the old foyer.
 notice-need-key = The door is locked.
 notice-door-open = The door is open. Step into the foyer.
 notice-foyer-entered = You step into the foyer. The street door is still bolted shut.
+notice-foyer-chain-engaged = The brass chain pulls taut; gears engage inside the lever box.
+notice-foyer-chain-slack = The lever spins loose. The brass chain below carries no tension.
 notice-lever-engaged = The brass lever locks down with a heavy metallic click.
-notice-levers-reset = Wrong sequence. All three levers snap back upright.
+notice-levers-reset = Wrong sequence. All four levers snap back upright.
 notice-front-door-unlocked = The final bolt slides free. The street door swings into the night.
 notice-front-door-locked = An internal linked bolt holds the front door shut.
 notice-front-door-open = The front door stands open. Step out into the night.
@@ -109,10 +111,12 @@ target-pick-paperweight = Pick up brass paperweight
 target-pick-book = Pick up hardcover book
 target-pick-box = Pick up wooden box
 target-pick-vase = Pick up brass vase
+target-pick-doorstop = Pick up iron doorstop
 target-drop-paperweight = Set down brass paperweight
 target-drop-book = Set down hardcover book
 target-drop-box = Set down wooden box
 target-drop-vase = Set down brass vase
+target-drop-doorstop = Set down iron doorstop
 target-lamp = Toggle oil lamp
 target-switch = Toggle ceiling light
 target-teacups = Examine tea cups
@@ -122,28 +126,33 @@ target-weight-box = Examine weight box
 target-mail-stack = Examine envelopes
 target-postage-chart = Read postage chart
 target-timetable = Read old timetable
-target-lever-coast = Pull lever · Coast
-target-lever-harbor = Pull lever · Harbor
-target-lever-station = Pull lever · Station
+target-moon-mark = Read luminous inscription
+target-lever-one = Pull lever I
+target-lever-two = Pull lever II
+target-lever-three = Pull lever III
+target-lever-four = Pull lever IV
+target-foyer-plate = Inspect chain cradle
 target-front-door = Inspect street door
 target-leave-house = Step into the night
 target-mailbox = Check foyer mailbox
 target-coat-rack = Examine coat rack
-target-foyer-light = Toggle foyer sconce
+target-foyer-light = Toggle foyer lights
 notice-lamp-on = The oil lamp glows warm again.
 notice-lamp-off = The oil lamp goes dark, leaving the desk in moonlight.
 notice-chandelier-on = The overhead chandelier lights up.
 notice-chandelier-off = The chandelier clicks off, leaving only moonlight and glow.
-notice-foyer-light-on = The foyer sconce casts a warm glow.
-notice-foyer-light-off = The foyer sconce clicks off.
+notice-foyer-light-on = The foyer lights come back on.
+notice-foyer-light-off = The foyer falls into moonlight; pale blue marks glow beside the street door.
 notice-teacups = Both cups have gone cold. Faint tea stains linger on one rim.
 notice-crate = Half-packed with old books, the twine still unknotted.
 notice-bookshelf = Worn railway timetables tucked between volumes of poetry.
 notice-weight-box = A walnut calibration weight box. The largest brass weight slot is empty.
 notice-mail-stack = Stamped envelopes awaiting wax seals, addressed to the seaside platform.
 notice-postage-chart = A yellowed postal tariff chart: “Weigh heavy letters and book parcels before posting.”
-notice-mailbox = A faded one-way coastal line ticket stub lies inside, creased from years of folding.
-notice-coat-rack = The coats are gone; only a weathered black umbrella leans against the stand.
+notice-mailbox = A half-torn ticket stub with chalk on the back: “Turn off the foyer lights to read the mark beside the door.”
+notice-coat-rack = The coats are gone; an old black umbrella leans here above a heavy cast-iron doorstop.
+notice-foyer-plate-hint = A small cradle hung from the lever box chain, hanging slack.
+notice-moon-mark-bright = Too bright here—only faint paint traces show on the wall.
 inventory-empty = No items yet
 inventory-key = Brass key · A letter
 note-caption = A familiar crease runs across the corner.
@@ -171,13 +180,20 @@ letter-take = Keep the letter and take the key ↗
 target-letter = Read the unsent letter
 target-photograph = Examine the seaside photograph
 timetable-eyebrow = WEST FOYER WALL · 1947 COASTAL LINE
-timetable-title = Last Night Train Schedule
-timetable-copy = 21:15  Coast   — First departure
-    21:40  Harbor  — Transfer stop
-    22:05  Station — Seaside terminus
+timetable-title = Platform Departure Schedule
+timetable-copy = Platform  I (Harbor):     Outbound 21:40  |  Return 23:10
+    Platform II (Lighthouse): Outbound 21:55  |  Return 22:50
+    Platform III (Coast):     Outbound 21:15  |  Return 23:30
+    Platform IV (Station):    Outbound 22:10  |  Return 22:35
 
-    “Before leaving, draw the bolts along the route of the night train.”
+    Each platform matches a numbered bolt on the east wall.
 timetable-caption = Hidden behind a stacked crate, with faint pencil marks along the margin.
+moonmark-eyebrow = SOUTH WALL IN DARKNESS · LUMINOUS PAINT
+moonmark-title = An order left for the night traveler
+moonmark-copy = “Do not board the 21:15 outbound train to the sea.
+    Take the return train starting at 22:35,
+    and draw the bolts along its stops to unlatch the door.”
+moonmark-caption = Visible only when the foyer lights are off.
 
 error-renderer = Rendering stopped. Reload to try again. If this happens again, share the diagnostic details below.
 error-diagnostics = Diagnostic details

@@ -2,9 +2,10 @@ pub const REQUIRED_PLATE_MASS_KG: f32 = 1.5;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Lever {
-    Coast,
-    Harbor,
-    Station,
+    One,
+    Two,
+    Three,
+    Four,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -16,8 +17,10 @@ pub enum Progress {
     KeyHeld,
     DoorOpen,
     FoyerEntered,
-    FoyerFirst,
-    FoyerSecond,
+    FoyerPowered,
+    FoyerStep1,
+    FoyerStep2,
+    FoyerStep3,
     FrontDoorOpen,
     Escaped,
 }
@@ -29,6 +32,7 @@ pub enum Action {
     TakeKey,
     UnlockDoor,
     EnterFoyer,
+    EngageFoyerChain,
     PullLever(Lever),
     Leave,
     Restart,
@@ -44,6 +48,8 @@ pub enum Reply {
     DoorUnlocked,
     NeedKey,
     FoyerEntered,
+    FoyerChainEngaged,
+    FoyerChainSlack,
     LeverEngaged,
     LeversReset,
     FrontDoorUnlocked,
@@ -53,7 +59,7 @@ pub enum Reply {
 }
 
 impl Progress {
-    /// 套用單一玩家動作；依序完成書房天平與密碼鎖、無縫步入玄關並依站序拉下三道黃銅拉桿。
+    /// 套用單一玩家動作；書房完成後無縫進入玄關，須先以重物繃緊銅鏈，再依回程順序 IV → II → I → III 拉下四道拉桿。
     pub fn apply(&mut self, action: Action) -> Reply {
         let (next, reply) = match (*self, action) {
             (_, Action::Restart) => (Self::Searching, Reply::Restarted),
@@ -71,18 +77,28 @@ impl Progress {
                 (*self, Reply::NeedKey)
             }
             (Self::DoorOpen, Action::EnterFoyer) => (Self::FoyerEntered, Reply::FoyerEntered),
-            (Self::FoyerEntered, Action::PullLever(Lever::Coast)) => {
-                (Self::FoyerFirst, Reply::LeverEngaged)
+            (Self::DoorOpen | Self::FoyerEntered, Action::EngageFoyerChain) => {
+                (Self::FoyerPowered, Reply::FoyerChainEngaged)
             }
-            (Self::FoyerFirst, Action::PullLever(Lever::Harbor)) => {
-                (Self::FoyerSecond, Reply::LeverEngaged)
+            (Self::DoorOpen | Self::FoyerEntered, Action::PullLever(_)) => {
+                (*self, Reply::FoyerChainSlack)
             }
-            (Self::FoyerSecond, Action::PullLever(Lever::Station)) => {
+            (Self::FoyerPowered, Action::PullLever(Lever::Four)) => {
+                (Self::FoyerStep1, Reply::LeverEngaged)
+            }
+            (Self::FoyerStep1, Action::PullLever(Lever::Two)) => {
+                (Self::FoyerStep2, Reply::LeverEngaged)
+            }
+            (Self::FoyerStep2, Action::PullLever(Lever::One)) => {
+                (Self::FoyerStep3, Reply::LeverEngaged)
+            }
+            (Self::FoyerStep3, Action::PullLever(Lever::Three)) => {
                 (Self::FrontDoorOpen, Reply::FrontDoorUnlocked)
             }
-            (Self::FoyerEntered | Self::FoyerFirst | Self::FoyerSecond, Action::PullLever(_)) => {
-                (Self::FoyerEntered, Reply::LeversReset)
-            }
+            (
+                Self::FoyerPowered | Self::FoyerStep1 | Self::FoyerStep2 | Self::FoyerStep3,
+                Action::PullLever(_),
+            ) => (Self::FoyerPowered, Reply::LeversReset),
             (Self::FrontDoorOpen, Action::Leave) => (Self::Escaped, Reply::Escaped),
             _ => (*self, Reply::Unchanged),
         };
@@ -102,12 +118,20 @@ impl Progress {
 
     /// 表示書房通往玄關的木門已解鎖，供碰撞及場景動畫取用。
     pub fn door_is_open(self) -> bool {
+        !matches!(
+            self,
+            Self::Searching | Self::LatchReleased | Self::SafeOpen | Self::KeyHeld
+        )
+    }
+
+    /// 表示玄關拉桿箱的銅鏈已受重物繃緊，拉桿可正常咬合。
+    pub fn foyer_chain_engaged(self) -> bool {
         matches!(
             self,
-            Self::DoorOpen
-                | Self::FoyerEntered
-                | Self::FoyerFirst
-                | Self::FoyerSecond
+            Self::FoyerPowered
+                | Self::FoyerStep1
+                | Self::FoyerStep2
+                | Self::FoyerStep3
                 | Self::FrontDoorOpen
                 | Self::Escaped
         )
@@ -116,15 +140,20 @@ impl Progress {
     /// 表示指定玄關黃銅拉桿目前處於扣下位置，完全由唯一進度導出。
     pub fn lever_is_down(self, lever: Lever) -> bool {
         match lever {
-            Lever::Coast => matches!(
+            Lever::Four => matches!(
                 self,
-                Self::FoyerFirst | Self::FoyerSecond | Self::FrontDoorOpen | Self::Escaped
+                Self::FoyerStep1
+                    | Self::FoyerStep2
+                    | Self::FoyerStep3
+                    | Self::FrontDoorOpen
+                    | Self::Escaped
             ),
-            Lever::Harbor => matches!(
+            Lever::Two => matches!(
                 self,
-                Self::FoyerSecond | Self::FrontDoorOpen | Self::Escaped
+                Self::FoyerStep2 | Self::FoyerStep3 | Self::FrontDoorOpen | Self::Escaped
             ),
-            Lever::Station => matches!(self, Self::FrontDoorOpen | Self::Escaped),
+            Lever::One => matches!(self, Self::FoyerStep3 | Self::FrontDoorOpen | Self::Escaped),
+            Lever::Three => matches!(self, Self::FrontDoorOpen | Self::Escaped),
         }
     }
 
@@ -138,15 +167,17 @@ impl Progress {
         matches!(
             self,
             Self::FoyerEntered
-                | Self::FoyerFirst
-                | Self::FoyerSecond
+                | Self::FoyerPowered
+                | Self::FoyerStep1
+                | Self::FoyerStep2
+                | Self::FoyerStep3
                 | Self::FrontDoorOpen
                 | Self::Escaped
         )
     }
 }
 
-/// 判斷天平秤盤上的物件總質量（公斤）是否達到觸發暗扣的門檻；拒絕 NaN 與無窮值。
+/// 判斷秤盤或承重托台上的物件總質量（公斤）是否達標；拒絕 NaN 與無窮值。
 ///
 /// ```
 /// assert!(!latch::puzzle::plate_triggered(1.49));
@@ -175,21 +206,23 @@ pub fn parse_code(input: &str) -> Option<[u8; 4]> {
 mod tests {
     use super::*;
 
-    const ALL_STAGES: [Progress; 10] = [
+    const ALL_STAGES: [Progress; 12] = [
         Progress::Searching,
         Progress::LatchReleased,
         Progress::SafeOpen,
         Progress::KeyHeld,
         Progress::DoorOpen,
         Progress::FoyerEntered,
-        Progress::FoyerFirst,
-        Progress::FoyerSecond,
+        Progress::FoyerPowered,
+        Progress::FoyerStep1,
+        Progress::FoyerStep2,
+        Progress::FoyerStep3,
         Progress::FrontDoorOpen,
         Progress::Escaped,
     ];
 
     #[test]
-    fn player_completes_study_and_seamless_foyer_then_restarts() {
+    fn player_completes_study_and_harder_foyer_then_restarts() {
         let mut game = Progress::default();
         for (action, reply) in [
             (Action::ReleaseLatch, Reply::LatchReleased),
@@ -197,9 +230,12 @@ mod tests {
             (Action::TakeKey, Reply::KeyTaken),
             (Action::UnlockDoor, Reply::DoorUnlocked),
             (Action::EnterFoyer, Reply::FoyerEntered),
-            (Action::PullLever(Lever::Coast), Reply::LeverEngaged),
-            (Action::PullLever(Lever::Harbor), Reply::LeverEngaged),
-            (Action::PullLever(Lever::Station), Reply::FrontDoorUnlocked),
+            (Action::PullLever(Lever::Four), Reply::FoyerChainSlack),
+            (Action::EngageFoyerChain, Reply::FoyerChainEngaged),
+            (Action::PullLever(Lever::Four), Reply::LeverEngaged),
+            (Action::PullLever(Lever::Two), Reply::LeverEngaged),
+            (Action::PullLever(Lever::One), Reply::LeverEngaged),
+            (Action::PullLever(Lever::Three), Reply::FrontDoorUnlocked),
             (Action::Leave, Reply::Escaped),
             (Action::Restart, Reply::Restarted),
         ] {
@@ -209,21 +245,27 @@ mod tests {
     }
 
     #[test]
-    fn wrong_lever_order_resets_all_levers_to_foyer_entered() {
+    fn wrong_lever_order_resets_all_four_levers_to_foyer_powered() {
         for (start, wrong) in [
-            (Progress::FoyerEntered, Lever::Harbor),
-            (Progress::FoyerEntered, Lever::Station),
-            (Progress::FoyerFirst, Lever::Coast),
-            (Progress::FoyerFirst, Lever::Station),
-            (Progress::FoyerSecond, Lever::Coast),
-            (Progress::FoyerSecond, Lever::Harbor),
+            (Progress::FoyerPowered, Lever::One),
+            (Progress::FoyerPowered, Lever::Two),
+            (Progress::FoyerPowered, Lever::Three),
+            (Progress::FoyerStep1, Lever::One),
+            (Progress::FoyerStep1, Lever::Three),
+            (Progress::FoyerStep1, Lever::Four),
+            (Progress::FoyerStep2, Lever::Two),
+            (Progress::FoyerStep2, Lever::Three),
+            (Progress::FoyerStep2, Lever::Four),
+            (Progress::FoyerStep3, Lever::One),
+            (Progress::FoyerStep3, Lever::Two),
+            (Progress::FoyerStep3, Lever::Four),
         ] {
             let mut game = start;
             assert_eq!(game.apply(Action::PullLever(wrong)), Reply::LeversReset);
-            assert_eq!(game, Progress::FoyerEntered);
-            assert!(!game.lever_is_down(Lever::Coast));
-            assert!(!game.lever_is_down(Lever::Harbor));
-            assert!(!game.lever_is_down(Lever::Station));
+            assert_eq!(game, Progress::FoyerPowered);
+            for lever in [Lever::One, Lever::Two, Lever::Three, Lever::Four] {
+                assert!(!game.lever_is_down(lever));
+            }
         }
     }
 
@@ -252,16 +294,18 @@ mod tests {
                 Action::TakeKey,
                 Action::UnlockDoor,
                 Action::EnterFoyer,
-                Action::PullLever(Lever::Coast),
-                Action::PullLever(Lever::Harbor),
-                Action::PullLever(Lever::Station),
+                Action::EngageFoyerChain,
+                Action::PullLever(Lever::One),
+                Action::PullLever(Lever::Two),
+                Action::PullLever(Lever::Three),
+                Action::PullLever(Lever::Four),
                 Action::Leave,
             ] {
                 let mut game = progress;
                 let reply = game.apply(action);
                 if matches!(
                     reply,
-                    Reply::Unchanged | Reply::NeedKey | Reply::LatchLocked
+                    Reply::Unchanged | Reply::NeedKey | Reply::LatchLocked | Reply::FoyerChainSlack
                 ) {
                     assert_eq!(game, progress);
                 }
@@ -305,33 +349,28 @@ mod tests {
                 !matches!(progress, Progress::Searching | Progress::LatchReleased)
             );
             assert_eq!(
-                progress.door_is_open(),
-                !matches!(
-                    progress,
-                    Progress::Searching
-                        | Progress::LatchReleased
-                        | Progress::SafeOpen
-                        | Progress::KeyHeld
-                )
-            );
-            assert_eq!(
                 progress.front_door_is_open(),
                 matches!(progress, Progress::FrontDoorOpen | Progress::Escaped)
             );
             assert_eq!(
-                progress.in_foyer(),
+                progress.lever_is_down(Lever::Three),
+                progress.front_door_is_open()
+            );
+            assert_eq!(
+                progress.foyer_chain_engaged(),
                 matches!(
                     progress,
-                    Progress::FoyerEntered
-                        | Progress::FoyerFirst
-                        | Progress::FoyerSecond
+                    Progress::FoyerPowered
+                        | Progress::FoyerStep1
+                        | Progress::FoyerStep2
+                        | Progress::FoyerStep3
                         | Progress::FrontDoorOpen
                         | Progress::Escaped
                 )
             );
             assert_eq!(
-                progress.lever_is_down(Lever::Station),
-                progress.front_door_is_open()
+                progress.in_foyer(),
+                progress == Progress::FoyerEntered || progress.foyer_chain_engaged()
             );
         }
     }
