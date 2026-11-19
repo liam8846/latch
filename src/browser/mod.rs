@@ -14,6 +14,7 @@ use audio::Audio;
 use bevy::prelude::*;
 use dom::Dom;
 use events::Listener;
+use fluent_bundle::FluentArgs;
 use latch::{
     i18n::{Locale, Localizer, MessageKey},
     puzzle::Progress,
@@ -24,6 +25,14 @@ use std::{
     sync::mpsc::{self, Receiver},
 };
 use wasm_bindgen::JsValue;
+
+const GITHUB_REDIRECT_URL: &str = "https://github.com/liam8846";
+const WIN_REDIRECT_DELAY_SECS: f64 = 5.0;
+
+struct WinRedirect {
+    deadline: f64,
+    triggered: bool,
+}
 
 enum BrowserCommand {
     Game(UiCommand),
@@ -42,6 +51,7 @@ pub struct BrowserUi {
     last_revision: u32,
     toast: Option<(MessageKey, f64)>,
     safe_message: MessageKey,
+    win_redirect: Option<WinRedirect>,
     failed: Rc<Cell<bool>>,
     failure_message: Rc<RefCell<String>>,
 }
@@ -80,6 +90,7 @@ impl BrowserUi {
             last_revision: 0,
             toast: None,
             safe_message: MessageKey::SafeHint,
+            win_redirect: None,
             failed,
             failure_message,
         })
@@ -144,7 +155,7 @@ impl BrowserUi {
         self.dom.hidden("hud", session.screen != Screen::Playing);
         self.dom.hidden("pause", session.screen != Screen::Playing);
         if self.last_screen != Some(session.screen) {
-            self.enter_screen(session.screen);
+            self.enter_screen(session.screen, now);
             self.last_screen = Some(session.screen);
         }
         if session.revision != self.last_revision {
@@ -187,6 +198,7 @@ impl BrowserUi {
         self.dom.text("target", &target);
         self.dom.hidden("interact", target.is_empty());
         self.render_inspect(session);
+        self.render_win_redirect(session.screen, now);
         self.render_sound();
         attribute(
             &self.dom.root,
@@ -241,17 +253,52 @@ impl BrowserUi {
         self.dom.hidden("close-inspect-footer", take);
     }
 
-    /// 只在真正畫面轉換時移動焦點與清空新開啟的密碼欄。
-    fn enter_screen(&mut self, screen: Screen) {
+    /// 顯示通關倒數並在時間到時自動跳轉至指定 GitHub 頁面。
+    fn render_win_redirect(&mut self, screen: Screen, now: f64) {
+        if screen != Screen::Won {
+            self.dom.text("win-redirect", "");
+            return;
+        }
+        let Some(redirect) = self.win_redirect.as_mut() else {
+            return;
+        };
+        let remaining = (redirect.deadline - now).max(0.0).ceil() as u32;
+        if remaining > 0 {
+            let mut args = FluentArgs::new();
+            args.set("seconds", remaining);
+            self.dom.text(
+                "win-redirect",
+                &self.localizer.text("win-redirect", Some(&args)),
+            );
+            return;
+        }
+        self.dom.text(
+            "win-redirect",
+            &self.localizer.text("win-redirecting", None),
+        );
+        if !redirect.triggered {
+            redirect.triggered = true;
+            if let Some(window) = web_sys::window() {
+                let _ = window.location().assign(GITHUB_REDIRECT_URL);
+            }
+        }
+    }
+
+    /// 只在真正畫面轉換時移動焦點、初始化通關跳轉計時與清空新開啟的密碼欄。
+    fn enter_screen(&mut self, screen: Screen, now: f64) {
         if screen != Screen::Playing && self.dom.document.pointer_lock_element().is_some() {
             self.dom.document.exit_pointer_lock();
         }
+        self.win_redirect = (screen == Screen::Won).then_some(WinRedirect {
+            deadline: now + WIN_REDIRECT_DELAY_SECS,
+            triggered: false,
+        });
         let focus = match screen {
             Screen::Playing => Some(&self.dom.canvas),
             Screen::Intro => Some(self.dom.get("begin")),
             Screen::Paused => Some(self.dom.get("resume")),
             Screen::Inspect(_) => Some(self.dom.get("close-inspect")),
-            Screen::Won => Some(self.dom.get("restart-won")),
+            Screen::Won => Some(self.dom.get("visit-github")),
             Screen::Safe => {
                 self.dom.code.set_value("");
                 self.safe_message = MessageKey::SafeHint;

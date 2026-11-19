@@ -322,6 +322,7 @@ mod tests {
             let localizer = Localizer::new(locale).unwrap();
             let mut args = FluentArgs::new();
             args.set("minutes", 3);
+            args.set("seconds", 5);
             for key in keys(ZH_HANT) {
                 assert!(
                     localizer.try_text(key, Some(&args)).is_ok(),
@@ -345,8 +346,22 @@ mod tests {
             localizer.text("intro-duration", Some(&args)),
             "About 3 minutes"
         );
+        args.set("seconds", 1);
+        assert_eq!(
+            localizer.text("win-redirect", Some(&args)),
+            "Redirecting to GitHub in 1 second…"
+        );
+        args.set("seconds", 5);
+        assert_eq!(
+            localizer.text("win-redirect", Some(&args)),
+            "Redirecting to GitHub in 5 seconds…"
+        );
         localizer.set_locale(Locale::ZhHant);
         assert_eq!(localizer.text("intro-duration", Some(&args)), "約 3 分鐘");
+        assert_eq!(
+            localizer.text("win-redirect", Some(&args)),
+            "5 秒後將自動前往 GitHub…"
+        );
         assert_eq!(localizer.message(MessageKey::KeyTaken), "已收起黃銅鑰匙。");
     }
 

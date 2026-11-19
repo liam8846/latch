@@ -68,6 +68,12 @@ win-title = Keep the memory.
 win-copy = It is still night beyond the door.
     You pocket the letter. This time, you know where to go.
 win-restart = Return to the study
+win-github = Visit GitHub
+win-redirect = Redirecting to GitHub in { $seconds ->
+    [one] 1 second
+   *[other] { $seconds } seconds
+    }…
+win-redirecting = Redirecting to GitHub…
 win-footer = LATCH · END OF CHAPTER ONE
 edition = AN ORIGINAL ROOM
 notice-restarted = The Midnight Study, once again.

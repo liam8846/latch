@@ -288,7 +288,8 @@ fn trap_focus(document: &Document, screen: Screen, key: &KeyboardEvent) {
         return;
     }
     let selector = format!(
-        "#{} button:not([hidden]), #{} input, .header-actions button:not([hidden]), .header-actions select",
+        "#{} a[href]:not([hidden]), #{} button:not([hidden]), #{} input, .header-actions button:not([hidden]), .header-actions select",
+        screen.id(),
         screen.id(),
         screen.id()
     );

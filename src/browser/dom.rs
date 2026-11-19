@@ -46,6 +46,8 @@ impl Dom {
             "resume",
             "restart-paused",
             "restart-won",
+            "visit-github",
+            "win-redirect",
             "close-inspect",
             "close-inspect-footer",
             "close-safe",

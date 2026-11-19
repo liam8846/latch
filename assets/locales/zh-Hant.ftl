@@ -65,6 +65,9 @@ win-title = 帶走回憶，
 win-copy = 門外仍是夜色。
     你把信收進口袋，這次知道要往哪裡走。
 win-restart = 再回書房
+win-github = 前往 GitHub
+win-redirect = { $seconds } 秒後將自動前往 GitHub…
+win-redirecting = 正在前往 GitHub…
 win-footer = LATCH · 第一章完
 edition = AN ORIGINAL ROOM
 notice-restarted = 午夜書房，再一次。

@@ -14,7 +14,7 @@ unic-langid = "=0.9.6"
 js-sys = "=0.3.107"
 wasm-bindgen = "=0.2.130"
 wasm-bindgen-futures = "=0.4.80"
-web-sys = { version = "=0.3.107", features = ["Window", "Document", "Element", "HtmlElement", "HtmlInputElement", "HtmlSelectElement", "HtmlCanvasElement", "Event", "EventTarget", "KeyboardEvent", "ErrorEvent", "NodeList", "AudioContext", "AudioContextState", "AudioDestinationNode", "AudioNode", "AudioParam", "GainNode", "OscillatorNode", "OscillatorType", "BaseAudioContext", "console"] }
+web-sys = { version = "=0.3.107", features = ["Window", "Location", "Document", "Element", "HtmlElement", "HtmlInputElement", "HtmlSelectElement", "HtmlCanvasElement", "Event", "EventTarget", "KeyboardEvent", "ErrorEvent", "NodeList", "AudioContext", "AudioContextState", "AudioDestinationNode", "AudioNode", "AudioParam", "GainNode", "OscillatorNode", "OscillatorType", "BaseAudioContext", "console"] }
 
 [profile.dev]
 opt-level = 1
