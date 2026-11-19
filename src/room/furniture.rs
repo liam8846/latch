@@ -21,19 +21,19 @@ pub(super) fn shelves(
     for y in [0.22, 0.83, 1.44, 2.05, 2.52] {
         room.block([-3.68, y, 1.42], [0.85, 0.07, 2.87], walnut);
     }
+    let covers = [
+        room.material([0.22, 0.31, 0.26], 0.0),
+        room.material([0.38, 0.15, 0.09], 0.0),
+        room.material([0.45, 0.34, 0.19], 0.0),
+        room.material([0.12, 0.2, 0.26], 0.0),
+    ];
     for tier in 0..3 {
         for i in 0..13 {
-            let color = match i % 4 {
-                0 => [0.22, 0.31, 0.26],
-                1 => [0.38, 0.15, 0.09],
-                2 => [0.45, 0.34, 0.19],
-                _ => [0.12, 0.2, 0.26],
-            };
-            let cover = room.material(color, 0.0);
+            let cover = &covers[i % 4];
             let height = 0.31 + ((i * 3 + tier) % 5) as f32 * 0.04;
             let z = 0.18 + i as f32 * 0.2;
             let y = 0.27 + tier as f32 * 0.61 + height * 0.5;
-            room.block([-3.6, y, z], [0.38, height, 0.14], &cover);
+            room.block([-3.6, y, z], [0.38, height, 0.14], cover);
             room.block([-3.4, y + height * 0.22, z], [0.012, 0.016, 0.13], brass);
         }
     }
@@ -190,7 +190,8 @@ pub(super) fn safe(
     let dial = room.cylinder([-0.085, 0.0, 0.55], 0.11, 0.05, brass);
     room.commands.entity(dial).insert(
         Transform::from_xyz(-0.085, 0.0, 0.55)
-            .with_rotation(Quat::from_rotation_z(std::f32::consts::FRAC_PI_2)),
+            .with_rotation(Quat::from_rotation_z(std::f32::consts::FRAC_PI_2))
+            .with_scale(Vec3::new(0.11, 0.05, 0.11)),
     );
     room.commands.entity(pivot).add_children(&[door, dial]);
     let bolt = room.block([3.07, 1.12, -1.12], [0.07, 0.34, 0.07], brass);

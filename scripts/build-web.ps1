@@ -1,4 +1,4 @@
-param([switch]$Dev)
+﻿param([switch]$Dev)
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 Push-Location $projectRoot
@@ -26,7 +26,7 @@ try {
     }
     if (Test-Path -LiteralPath $legacyScript -PathType Leaf) { Remove-Item -LiteralPath $legacyScript }
 
-    & wasm-bindgen --target web --no-typescript --out-dir (Join-Path $dist 'pkg') $wasmPath
+    & wasm-bindgen --target web --no-typescript --remove-name-section --remove-producers-section --out-dir (Join-Path $dist 'pkg') $wasmPath
     if ($LASTEXITCODE -ne 0) { throw 'wasm-bindgen 匯出失敗。' }
     Copy-Item -LiteralPath 'index.html', 'style.css', 'bootstrap.js' -Destination $dist -Force
     Copy-Item -LiteralPath 'assets' -Destination $dist -Recurse -Force

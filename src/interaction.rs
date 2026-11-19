@@ -101,6 +101,7 @@ pub fn focus_target(
     player: Query<&Transform, With<Player>>,
     lookup: FocusLookup,
     mut focus: ResMut<Focus>,
+    mut probe_cache: Local<Option<Collider>>,
 ) {
     focus.0 = None;
     if let Some((_, kind)) = held.0 {
@@ -137,10 +138,10 @@ pub fn focus_target(
     }
     let max_prop_distance = ray_hit.map_or(3.2, |hit| (hit.distance + 0.08).min(3.2));
     let prop_filter = SpatialQueryFilter::from_mask([GameLayer::Prop]);
-    let probe = Collider::sphere(0.08);
+    let probe = probe_cache.get_or_insert_with(|| Collider::sphere(0.08));
     let config = ShapeCastConfig::from_max_distance(max_prop_distance);
     if let Some(hit) = spatial.cast_shape(
-        &probe,
+        probe,
         origin,
         Quat::IDENTITY,
         forward,

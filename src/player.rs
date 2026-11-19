@@ -58,6 +58,7 @@ pub fn move_player(
     mut pushables: Query<&mut LinearVelocity, With<Pushable>>,
     mut player: Query<(&mut Transform, &mut Player)>,
     mut session: ResMut<Session>,
+    mut body: Local<Option<Collider>>,
 ) {
     let Ok((mut transform, mut look)) = player.single_mut() else {
         return;
@@ -88,7 +89,8 @@ pub fn move_player(
         -axis(KeyCode::KeyW, KeyCode::KeyS),
     );
     let mut remaining = Quat::from_rotation_y(look.yaw) * local.normalize_or_zero() * dt * 2.25;
-    let shape = Collider::capsule(PLAYER_RADIUS, PLAYER_CYLINDER_HEIGHT);
+    let shape =
+        body.get_or_insert_with(|| Collider::capsule(PLAYER_RADIUS, PLAYER_CYLINDER_HEIGHT));
     let filter = SpatialQueryFilter::from_mask([GameLayer::World, GameLayer::Furniture]);
     for _ in 0..3 {
         let distance = remaining.length();
@@ -101,7 +103,7 @@ pub fn move_player(
         let origin = transform.translation + Vec3::Y * BODY_Y_OFFSET;
         let config = ShapeCastConfig::from_max_distance(distance + COLLISION_SKIN);
         let Some(hit) =
-            spatial.cast_shape(&shape, origin, Quat::IDENTITY, direction, &config, &filter)
+            spatial.cast_shape(shape, origin, Quat::IDENTITY, direction, &config, &filter)
         else {
             transform.translation += remaining;
             break;

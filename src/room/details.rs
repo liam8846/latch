@@ -46,13 +46,13 @@ pub(super) fn keepsakes(
 ) {
     let ceramic = room.material([0.73, 0.77, 0.67], 0.05);
     let tea = room.material([0.09, 0.044, 0.023], 0.0);
+    let handle_mesh = room.meshes.add(Torus::new(0.033, 0.05));
     for (x, z) in [(-1.52, -2.64), (-1.22, -3.12)] {
         room.cylinder([x, 1.025, z], 0.13, 0.017, &ceramic);
         room.cylinder([x, 1.105, z], 0.075, 0.15, &ceramic);
         room.cylinder([x, 1.182, z], 0.061, 0.006, &tea);
-        let handle = room.meshes.add(Torus::new(0.033, 0.05));
         room.commands.spawn((
-            Mesh3d(handle),
+            Mesh3d(handle_mesh.clone()),
             MeshMaterial3d(ceramic.clone()),
             Transform::from_xyz(x + 0.085, 1.11, z)
                 .with_rotation(Quat::from_rotation_x(std::f32::consts::FRAC_PI_2)),

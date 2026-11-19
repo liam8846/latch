@@ -35,7 +35,7 @@ cargo +"$rust_version" build --locked --release --target wasm32-unknown-unknown 
 wasm="${CARGO_TARGET_DIR:-$project_root/target}/wasm32-unknown-unknown/release/latch.wasm"
 mkdir -p dist/pkg
 rm -f -- dist/app.js
-"$bindgen" --target web --no-typescript --out-dir dist/pkg "$wasm"
+"$bindgen" --target web --no-typescript --remove-name-section --remove-producers-section --out-dir dist/pkg "$wasm"
 cp -- index.html style.css bootstrap.js dist/
 cp -R -- assets/. dist/assets/
 gzip -9 -n -c dist/pkg/latch_bg.wasm > dist/pkg/latch_bg.wasm.gz

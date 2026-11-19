@@ -1,6 +1,6 @@
 # PBR 材質貼圖來源與授權
 
-本目錄中的 PBR 材質貼圖全部來自 [Poly Haven](https://polyhaven.com/textures)，採用 **CC0 1.0 Universal（公眾領域）** 授權，統一選用 `1k` JPEG 格式（包含 Diffuse、OpenGL Normal 與 ARM 通道貼圖），以兼顧網頁 WebGPU 寫實質感與載入體積。
+本目錄中的 PBR 材質貼圖全部來自 [Poly Haven](https://polyhaven.com/textures)，採用 **CC0 1.0 Universal（公眾領域）** 授權，原始 `1k` JPEG 貼圖已依室內觀看距離縮放為 `512×512` JPEG（品質 82%，包含 Diffuse、OpenGL Normal 與 ARM 通道貼圖），以兼顧網頁 WebGPU 寫實質感、載入速度與顯存佔用。
 
 | 目錄 | 名稱 | 作者 | 授權 | 來源 | 用途 |
 | --- | --- | --- | --- | --- | --- |

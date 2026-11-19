@@ -20,6 +20,7 @@ use session::{Screen, Session};
 fn main() {
     let mut app = App::new();
     app.insert_resource(ClearColor(Color::srgb(0.025, 0.04, 0.045)))
+        .insert_resource(bevy::light::PointLightShadowMap { size: 512 })
         .insert_resource(GlobalAmbientLight {
             color: Color::srgb(0.8, 0.88, 0.85),
             brightness: 75.0,

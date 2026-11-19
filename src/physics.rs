@@ -234,6 +234,9 @@ pub fn animate_drawers(
     let dt = time.delta_secs().min(0.1);
     for (mut drawer, mut transform, mut position) in &mut drawers {
         let target = if drawer.open { 1.0 } else { 0.0 };
+        if (target - drawer.progress).abs() < 1e-4 {
+            continue;
+        }
         let previous = transform.translation;
         let factor = 1.0 - (-dt * 7.5).exp();
         drawer.progress += (target - drawer.progress) * factor;
@@ -341,8 +344,10 @@ pub fn update_pressure_plate(
         } else {
             plate.base_y
         };
-        transform.translation.y += (target_y - transform.translation.y) * factor;
-        position.0.y = transform.translation.y;
+        if (target_y - transform.translation.y).abs() > 1e-4 {
+            transform.translation.y += (target_y - transform.translation.y) * factor;
+            position.0.y = transform.translation.y;
+        }
     }
     for (bolt, mut transform) in &mut bolts {
         let target_y = if session.progress.latch_is_released() {
@@ -350,7 +355,9 @@ pub fn update_pressure_plate(
         } else {
             bolt.locked_y
         };
-        transform.translation.y += (target_y - transform.translation.y) * factor;
+        if (target_y - transform.translation.y).abs() > 1e-4 {
+            transform.translation.y += (target_y - transform.translation.y) * factor;
+        }
     }
 }
 
@@ -399,11 +406,15 @@ pub fn apply_reset(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{
+        interaction::{self, Focus, FocusTarget},
+        session::{UiCommand, UiCommands},
+    };
     use bevy::time::TimeUpdateStrategy;
     use std::time::Duration;
 
-    #[test]
-    fn held_prop_lifts_to_camera_and_triggers_plate_when_dropped() {
+    /// 建立無頭 Avian3D 測試 App，以固定 60Hz 手動步長驅動物理與互動系統。
+    fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins((
             MinimalPlugins,
@@ -418,9 +429,30 @@ mod tests {
             screen: Screen::Playing,
             ..Default::default()
         })
+        .init_resource::<UiCommands>()
+        .init_resource::<Focus>()
         .init_resource::<HeldProp>()
-        .add_systems(Update, (carry_held_prop, update_pressure_plate).chain());
+        .init_resource::<PhysicsReset>()
+        .init_resource::<ButtonInput<KeyCode>>()
+        .add_systems(
+            Update,
+            (
+                interaction::act,
+                apply_reset,
+                animate_drawers,
+                carry_held_prop,
+                update_pressure_plate,
+                interaction::focus_target,
+            )
+                .chain(),
+        );
         app.finish();
+        app
+    }
+
+    #[test]
+    fn held_prop_lifts_to_camera_and_triggers_plate_when_dropped() {
+        let mut app = test_app();
         app.world_mut().spawn((
             Transform::from_xyz(0.0, 1.65, 0.0),
             Player {
@@ -462,31 +494,18 @@ mod tests {
                 travel: 0.035,
             },
         ));
-
         for _ in 0..10 {
             app.update();
         }
-        {
-            let mut held = app.world_mut().resource_mut::<HeldProp>();
-            held.0 = Some((prop, PropKind::Paperweight));
-        }
+        app.world_mut().resource_mut::<HeldProp>().0 = Some((prop, PropKind::Paperweight));
         app.world_mut()
             .entity_mut(prop)
             .insert((GravityScale(0.0), CollisionLayers::NONE));
-
         for _ in 0..40 {
             app.update();
         }
-        let lifted_y = app.world().get::<Transform>(prop).unwrap().translation.y;
-        assert!(
-            lifted_y > 1.2,
-            "held prop should lift toward camera hold point, got y={lifted_y}"
-        );
-
-        {
-            let mut held = app.world_mut().resource_mut::<HeldProp>();
-            held.0 = None;
-        }
+        assert!(app.world().get::<Transform>(prop).unwrap().translation.y > 1.2);
+        app.world_mut().resource_mut::<HeldProp>().0 = None;
         app.world_mut()
             .entity_mut(prop)
             .insert((GravityScale(1.0), prop_layers()));
@@ -501,42 +520,7 @@ mod tests {
 
     #[test]
     fn focus_target_hits_props_and_act_picks_them_up() {
-        use crate::{
-            interaction::{self, Focus, FocusTarget},
-            session::{UiCommand, UiCommands},
-        };
-        let mut app = App::new();
-        app.add_plugins((
-            MinimalPlugins,
-            TransformPlugin,
-            PhysicsPlugins::default(),
-            bevy::asset::AssetPlugin::default(),
-        ))
-        .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_secs_f32(
-            1.0 / 60.0,
-        )))
-        .insert_resource(Session {
-            screen: Screen::Playing,
-            ..Default::default()
-        })
-        .init_resource::<UiCommands>()
-        .init_resource::<Focus>()
-        .init_resource::<HeldProp>()
-        .init_resource::<PhysicsReset>()
-        .init_resource::<ButtonInput<KeyCode>>()
-        .add_systems(
-            Update,
-            (
-                interaction::act,
-                apply_reset,
-                animate_drawers,
-                carry_held_prop,
-                interaction::focus_target,
-            )
-                .chain(),
-        );
-        app.finish();
-
+        let mut app = test_app();
         app.world_mut().spawn((
             Transform::from_xyz(-0.8, 0.94, -2.85).with_scale(Vec3::new(2.65, 0.13, 1.12)),
             RigidBody::Static,
@@ -561,51 +545,35 @@ mod tests {
                 },
             ))
             .id();
-        app.world_mut().spawn((
-            Transform::from_xyz(-1.72, 1.65, -2.0)
-                .looking_at(Vec3::new(-1.72, 1.06, -3.08), Vec3::Y),
-            Player {
-                yaw: 0.0,
-                pitch: -0.5,
-            },
-        ));
-
+        let player = app
+            .world_mut()
+            .spawn((
+                Transform::from_xyz(-1.72, 1.65, -2.0)
+                    .looking_at(Vec3::new(-1.72, 1.06, -3.08), Vec3::Y),
+                Player {
+                    yaw: 0.0,
+                    pitch: -0.5,
+                },
+            ))
+            .id();
         for _ in 0..30 {
             app.update();
         }
-        let book_pos = app.world().get::<Transform>(book).unwrap().translation;
-        let focused = app.world().resource::<Focus>().0;
-        assert!(
-            matches!(focused, Some(FocusTarget::Prop(e, PropKind::Book)) if e == book),
-            "expected FocusTarget::Prop(Book), got {:?}, book_pos={:?}",
-            focused.map(|f| matches!(f, FocusTarget::Prop(_, _))),
-            book_pos
-        );
-
+        assert!(matches!(
+            app.world().resource::<Focus>().0,
+            Some(FocusTarget::Prop(e, PropKind::Book)) if e == book
+        ));
         app.world_mut()
             .resource_mut::<UiCommands>()
             .0
             .push_back(UiCommand::Interact);
         app.update();
-        assert!(
-            app.world().resource::<HeldProp>().0.is_some(),
-            "book should be held after Interact"
-        );
-        let player_entity = app
-            .world_mut()
-            .query_filtered::<Entity, With<Player>>()
-            .single(app.world())
-            .unwrap();
-        *app.world_mut().get_mut::<Transform>(player_entity).unwrap() =
+        assert!(app.world().resource::<HeldProp>().0.is_some());
+        *app.world_mut().get_mut::<Transform>(player).unwrap() =
             Transform::from_xyz(-1.72, 1.65, -2.0);
         for _ in 0..40 {
             app.update();
         }
-        let lifted_pos = app.world().get::<Transform>(book).unwrap().translation;
-        assert!(
-            lifted_pos.y > 1.4,
-            "book should lift toward horizontal camera, stayed at {:?}",
-            lifted_pos
-        );
+        assert!(app.world().get::<Transform>(book).unwrap().translation.y > 1.4);
     }
 }

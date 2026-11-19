@@ -23,10 +23,11 @@ opt-level = 1
 opt-level = 3
 
 [profile.release]
-opt-level = "s"
-lto = "thin"
+opt-level = "z"
+lto = true
 codegen-units = 1
 strip = "debuginfo"
+panic = "abort"
 
 [patch.crates-io]
 bevy_pbr = { path = "vendor/bevy_pbr" }

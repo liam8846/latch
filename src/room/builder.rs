@@ -10,6 +10,8 @@ pub(super) struct Furnisher<'a, 'w, 's> {
     pub(super) meshes: &'a mut Assets<Mesh>,
     pub(super) materials: &'a mut Assets<StandardMaterial>,
     pub(super) cube: Handle<Mesh>,
+    pub(super) cylinder: Handle<Mesh>,
+    pub(super) sphere: Handle<Mesh>,
 }
 
 impl Furnisher<'_, '_, '_> {
@@ -58,7 +60,7 @@ impl Furnisher<'_, '_, '_> {
             .id()
     }
 
-    /// 建立垂直圓柱，半徑與高度均以公尺表示。
+    /// 建立垂直圓柱，共用單位圓柱網格並以半徑與高度（公尺）縮放。
     pub(super) fn cylinder(
         &mut self,
         at: [f32; 3],
@@ -66,27 +68,26 @@ impl Furnisher<'_, '_, '_> {
         height: f32,
         material: &Handle<StandardMaterial>,
     ) -> Entity {
-        let mesh = self.meshes.add(Cylinder::new(radius, height));
         self.commands
             .spawn((
-                Mesh3d(mesh),
+                Mesh3d(self.cylinder.clone()),
                 MeshMaterial3d(material.clone()),
-                Transform::from_translation(Vec3::from(at)),
+                Transform::from_translation(Vec3::from(at))
+                    .with_scale(Vec3::new(radius, height, radius)),
             ))
             .id()
     }
 
-    /// 建立不透明橢球裝飾，以公尺制三軸縮放球體。
+    /// 建立不透明橢球裝飾，共用單位球體網格並以公尺制三軸縮放。
     pub(super) fn ellipsoid(
         &mut self,
         at: [f32; 3],
         size: [f32; 3],
         material: &Handle<StandardMaterial>,
     ) -> Entity {
-        let mesh = self.meshes.add(Sphere::new(1.0).mesh().uv(12, 8));
         self.commands
             .spawn((
-                Mesh3d(mesh),
+                Mesh3d(self.sphere.clone()),
                 MeshMaterial3d(material.clone()),
                 Transform::from_translation(Vec3::from(at)).with_scale(Vec3::from(size)),
             ))

@@ -47,18 +47,36 @@ pub fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
     assets: Res<AssetServer>,
 ) {
-    let cube_mesh = Cuboid::new(1.0, 1.0, 1.0)
-        .mesh()
-        .build()
-        .with_generated_tangents()
-        .unwrap_or_else(|_| Cuboid::new(1.0, 1.0, 1.0).into());
-    let cube = meshes.add(cube_mesh);
+    let cube = meshes.add(
+        Cuboid::new(1.0, 1.0, 1.0)
+            .mesh()
+            .build()
+            .with_generated_tangents()
+            .unwrap_or_else(|_| Cuboid::new(1.0, 1.0, 1.0).into()),
+    );
+    let cylinder = meshes.add(
+        Cylinder::new(1.0, 1.0)
+            .mesh()
+            .resolution(16)
+            .build()
+            .with_generated_tangents()
+            .unwrap_or_else(|_| Cylinder::new(1.0, 1.0).into()),
+    );
+    let sphere = meshes.add(
+        Sphere::new(1.0)
+            .mesh()
+            .uv(12, 8)
+            .with_generated_tangents()
+            .unwrap_or_else(|_| Sphere::new(1.0).mesh().uv(12, 8)),
+    );
     let palette = materials::build(&assets, &mut materials);
     let mut room = Furnisher {
         commands: &mut commands,
         meshes: &mut meshes,
         materials: &mut materials,
         cube,
+        cylinder,
+        sphere,
     };
     room.block([0.0, -0.12, 0.0], [9.2, 0.2, 9.2], &palette.walnut);
     room.static_box([0.0, -0.0875, 1.0], [10.0, 0.2, 14.0]);
@@ -225,30 +243,38 @@ pub fn animate(
             Hinge::Safe => session.progress.safe_is_open(),
             Hinge::Exit => session.progress.door_is_open(),
         };
-        let target = if open {
+        let target = Quat::from_rotation_y(if open {
             -std::f32::consts::FRAC_PI_2 * 0.95
         } else {
             0.0
-        };
-        transform.rotation = transform
-            .rotation
-            .slerp(Quat::from_rotation_y(target), 1.0 - (-dt * 5.0).exp());
+        });
+        if transform.rotation.angle_between(target) > 1e-4 {
+            transform.rotation = transform.rotation.slerp(target, 1.0 - (-dt * 5.0).exp());
+        }
     }
     let ratio = balance.0.iter().next().map_or(0.0, |(plate, transform)| {
         ((plate.base_y - transform.translation.y) / plate.travel).clamp(0.0, 1.0)
     });
-    let tilt = 0.18 + (-0.04 - 0.18) * ratio;
+    let tilt = Quat::from_rotation_x(0.18 + (-0.04 - 0.18) * ratio);
     for mut transform in &mut balance.1 {
-        transform.rotation = Quat::from_rotation_x(tilt);
+        if transform.rotation.angle_between(tilt) > 1e-4 {
+            transform.rotation = tilt;
+        }
     }
     for (pan, mut transform) in &mut balance.2 {
-        transform.translation.y = pan.low_y + (pan.high_y - pan.low_y) * ratio;
+        let target_y = pan.low_y + (pan.high_y - pan.low_y) * ratio;
+        if (transform.translation.y - target_y).abs() > 1e-4 {
+            transform.translation.y = target_y;
+        }
     }
     for mut visibility in &mut keys {
-        *visibility = if session.progress == Progress::SafeOpen {
+        let next = if session.progress == Progress::SafeOpen {
             Visibility::Visible
         } else {
             Visibility::Hidden
         };
+        if *visibility != next {
+            *visibility = next;
+        }
     }
 }
