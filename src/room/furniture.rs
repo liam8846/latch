@@ -334,7 +334,7 @@ pub(super) fn balance_corner(room: &mut Furnisher, assets: &AssetServer, palette
     room.sensor([4.40, 1.44, 0.22], [0.14, 0.46, 0.60], Target::PostageChart);
 }
 
-/// 建立南側出口，房門附帶隨鉸鏈旋轉的碰撞體，解鎖後可實際走出房間。
+/// 建立南側書房門，房門附帶隨鉸鏈旋轉的碰撞體，解鎖後可無縫走進玄關長廊。
 pub(super) fn exit(
     room: &mut Furnisher,
     wood: &Handle<StandardMaterial>,
@@ -364,10 +364,4 @@ pub(super) fn exit(
     room.commands
         .entity(pivot)
         .add_children(&[door, panel, handle]);
-    room.block([1.9, 0.0, 5.65], [2.0, 0.07, 2.4], wood);
-    let night = room.material([0.025, 0.045, 0.08], 0.0);
-    room.solid_block([1.9, 1.45, 7.0], [2.0, 3.0, 0.1], &night);
-    room.static_box([0.85, 1.5, 5.8], [0.2, 3.0, 2.6]);
-    room.static_box([2.95, 1.5, 5.8], [0.2, 3.0, 2.6]);
-    room.light([1.9, 2.0, 5.9], [0.55, 0.66, 1.0], 480.0, false);
 }

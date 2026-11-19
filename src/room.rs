@@ -1,5 +1,6 @@
 mod builder;
 mod details;
+mod foyer;
 mod furniture;
 mod materials;
 
@@ -7,13 +8,17 @@ use crate::{Session, interaction::Target, physics::PressurePlate};
 use bevy::prelude::*;
 use builder::Furnisher;
 use furniture::{balance_corner, chair, desk_drawer, exit, safe, shelves};
-use latch::puzzle::Progress;
+use latch::puzzle::{Lever, Progress};
 
 #[derive(Component)]
 pub enum Hinge {
     Safe,
     Exit,
+    FrontDoor,
 }
+
+#[derive(Component)]
+pub struct LeverHinge(pub Lever);
 
 #[derive(Component)]
 pub struct Key;
@@ -31,6 +36,7 @@ pub struct BalanceCounterPan {
 pub enum LightKind {
     DeskLamp,
     Chandelier,
+    FoyerLamp,
 }
 
 #[derive(Component)]
@@ -198,6 +204,7 @@ pub fn setup(
         0.0,
         0.85,
     );
+    foyer::setup(&mut room, &assets, &palette);
 }
 
 type BalanceAnimateQueries<'w, 's> = (
@@ -209,6 +216,7 @@ type BalanceAnimateQueries<'w, 's> = (
             Without<Hinge>,
             Without<BalanceBeam>,
             Without<BalanceCounterPan>,
+            Without<LeverHinge>,
         ),
     >,
     Query<
@@ -219,17 +227,28 @@ type BalanceAnimateQueries<'w, 's> = (
             With<BalanceBeam>,
             Without<Hinge>,
             Without<BalanceCounterPan>,
+            Without<LeverHinge>,
         ),
     >,
     Query<
         'w,
         's,
         (&'static BalanceCounterPan, &'static mut Transform),
-        (Without<Hinge>, Without<BalanceBeam>),
+        (Without<Hinge>, Without<BalanceBeam>, Without<LeverHinge>),
+    >,
+    Query<
+        'w,
+        's,
+        (&'static LeverHinge, &'static mut Transform),
+        (
+            Without<Hinge>,
+            Without<BalanceBeam>,
+            Without<BalanceCounterPan>,
+        ),
     >,
 );
 
-/// 以秒步長逼近門板角度與天平橫樑傾角；門與鑰匙的呈現完全由唯一謎題進度導出。
+/// 以秒步長逼近門板角度、天平橫樑與玄關拉桿；呈現完全由唯一謎題進度導出。
 pub fn animate(
     time: Res<Time>,
     session: Res<Session>,
@@ -242,6 +261,7 @@ pub fn animate(
         let open = match hinge {
             Hinge::Safe => session.progress.safe_is_open(),
             Hinge::Exit => session.progress.door_is_open(),
+            Hinge::FrontDoor => session.progress.front_door_is_open(),
         };
         let target = Quat::from_rotation_y(if open {
             -std::f32::consts::FRAC_PI_2 * 0.95
@@ -265,6 +285,16 @@ pub fn animate(
         let target_y = pan.low_y + (pan.high_y - pan.low_y) * ratio;
         if (transform.translation.y - target_y).abs() > 1e-4 {
             transform.translation.y = target_y;
+        }
+    }
+    for (lever, mut transform) in &mut balance.3 {
+        let target = Quat::from_rotation_z(if session.progress.lever_is_down(lever.0) {
+            0.55
+        } else {
+            -0.55
+        });
+        if transform.rotation.angle_between(target) > 1e-4 {
+            transform.rotation = transform.rotation.slerp(target, 1.0 - (-dt * 9.0).exp());
         }
     }
     for mut visibility in &mut keys {

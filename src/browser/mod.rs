@@ -172,10 +172,8 @@ impl BrowserUi {
             "objective",
             &self.localizer.message(objective(session.progress)),
         );
-        let inventory = if matches!(
-            session.progress,
-            Progress::KeyHeld | Progress::DoorOpen | Progress::Escaped
-        ) {
+        let inventory = if session.progress == Progress::KeyHeld || session.progress.door_is_open()
+        {
             MessageKey::InventoryKey
         } else {
             MessageKey::InventoryEmpty
@@ -226,6 +224,7 @@ impl BrowserUi {
             Exhibit::Note => "note",
             Exhibit::Photograph => "photograph",
             Exhibit::Letter => "letter",
+            Exhibit::Timetable => "timetable",
         };
         for part in ["title", "eyebrow", "copy", "caption"] {
             self.dom.text(
@@ -305,6 +304,10 @@ fn objective(progress: Progress) -> MessageKey {
         Progress::SafeOpen => MessageKey::ObjectiveSafe,
         Progress::KeyHeld => MessageKey::ObjectiveKey,
         Progress::DoorOpen => MessageKey::ObjectiveDoor,
+        Progress::FoyerEntered | Progress::FoyerFirst | Progress::FoyerSecond => {
+            MessageKey::ObjectiveFoyer
+        }
+        Progress::FrontDoorOpen => MessageKey::ObjectiveFrontDoor,
         Progress::Escaped => MessageKey::ObjectiveEscaped,
     }
 }

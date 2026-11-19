@@ -128,7 +128,11 @@ pub fn move_player(
         normal = normal.normalize();
         remaining = leftover - normal * leftover.dot(normal);
     }
-    if session.progress == Progress::DoorOpen && transform.translation.z > 5.65 {
+    if session.progress == Progress::DoorOpen && transform.translation.z > 6.4 {
+        session.progress.apply(Action::EnterFoyer);
+        session.notify(MessageKey::FoyerEntered, SoundCue::Tap);
+    }
+    if session.progress == Progress::FrontDoorOpen && transform.translation.z > 14.9 {
         session.progress.apply(Action::Leave);
         session.screen = Screen::Won;
         session.notify(MessageKey::Escaped, SoundCue::Win);

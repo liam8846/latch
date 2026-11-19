@@ -6,6 +6,7 @@ pub enum Exhibit {
     Note,
     Photograph,
     Letter,
+    Timetable,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

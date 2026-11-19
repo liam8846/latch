@@ -11,7 +11,7 @@ use avian3d::prelude::*;
 use bevy::{ecs::system::SystemParam, prelude::*};
 use latch::{
     i18n::MessageKey,
-    puzzle::{Action, Progress, Reply},
+    puzzle::{Action, Lever, Progress, Reply},
 };
 
 #[derive(Clone, Copy, Component, PartialEq, Eq)]
@@ -29,6 +29,12 @@ pub enum Target {
     WeightBox,
     MailStack,
     PostageChart,
+    Timetable,
+    Lever(Lever),
+    FrontDoor,
+    Mailbox,
+    CoatRack,
+    FoyerLight,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -69,6 +75,17 @@ impl FocusTarget {
             Self::Static(Target::WeightBox) => MessageKey::InspectWeightBox,
             Self::Static(Target::MailStack) => MessageKey::InspectMailStack,
             Self::Static(Target::PostageChart) => MessageKey::InspectPostageChart,
+            Self::Static(Target::Timetable) => MessageKey::ReadTimetable,
+            Self::Static(Target::Lever(Lever::Coast)) => MessageKey::PullLeverCoast,
+            Self::Static(Target::Lever(Lever::Harbor)) => MessageKey::PullLeverHarbor,
+            Self::Static(Target::Lever(Lever::Station)) => MessageKey::PullLeverStation,
+            Self::Static(Target::FrontDoor) if progress.front_door_is_open() => {
+                MessageKey::LeaveHouse
+            }
+            Self::Static(Target::FrontDoor) => MessageKey::OpenFrontDoor,
+            Self::Static(Target::Mailbox) => MessageKey::InspectMailbox,
+            Self::Static(Target::CoatRack) => MessageKey::InspectCoatRack,
+            Self::Static(Target::FoyerLight) => MessageKey::ToggleFoyerLight,
         }
     }
 }
@@ -307,6 +324,48 @@ fn interact(session: &mut Session, world: &mut WorldAct, target: Option<FocusTar
         }
         Some(FocusTarget::Static(Target::PostageChart)) => {
             session.notify(MessageKey::PostageChartNote, SoundCue::Tap);
+        }
+        Some(FocusTarget::Static(Target::Timetable)) => {
+            session.screen = Screen::Inspect(Exhibit::Timetable);
+        }
+        Some(FocusTarget::Static(Target::Lever(lever))) => {
+            if session.progress == Progress::DoorOpen {
+                session.progress.apply(Action::EnterFoyer);
+            }
+            match session.progress.apply(Action::PullLever(lever)) {
+                Reply::LeverEngaged => {
+                    session.notify(MessageKey::LeverEngaged, SoundCue::Tap);
+                }
+                Reply::LeversReset => {
+                    session.notify(MessageKey::LeversReset, SoundCue::Wrong);
+                }
+                Reply::FrontDoorUnlocked => {
+                    session.notify(MessageKey::FrontDoorUnlocked, SoundCue::Unlock);
+                }
+                _ => {}
+            }
+        }
+        Some(FocusTarget::Static(Target::FrontDoor)) => {
+            if session.progress.front_door_is_open() {
+                session.notify(MessageKey::FrontDoorAlreadyOpen, SoundCue::Tap);
+            } else {
+                session.notify(MessageKey::FrontDoorLocked, SoundCue::Wrong);
+            }
+        }
+        Some(FocusTarget::Static(Target::Mailbox)) => {
+            session.notify(MessageKey::MailboxNote, SoundCue::Tap);
+        }
+        Some(FocusTarget::Static(Target::CoatRack)) => {
+            session.notify(MessageKey::CoatRackNote, SoundCue::Tap);
+        }
+        Some(FocusTarget::Static(Target::FoyerLight)) => {
+            toggle_light(
+                session,
+                &mut world.lights,
+                LightKind::FoyerLamp,
+                MessageKey::FoyerLightOn,
+                MessageKey::FoyerLightOff,
+            );
         }
         None => {}
     }

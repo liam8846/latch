@@ -24,10 +24,7 @@ impl MusicScene {
             Screen::Inspect(_) | Screen::Safe => Self::Reading,
             Screen::Won => Self::Departure,
             Screen::Playing
-                if matches!(
-                    session.progress,
-                    Progress::KeyHeld | Progress::DoorOpen | Progress::Escaped
-                ) =>
+                if session.progress == Progress::KeyHeld || session.progress.door_is_open() =>
             {
                 Self::Departure
             }
@@ -140,10 +137,7 @@ impl Audio {
     /// 以短 lookahead 排程音符；閱讀降低音量但保留旋律位置。
     pub fn update(&mut self, session: &Session) {
         let scene = MusicScene::from_session(session);
-        let resolved = matches!(
-            session.progress,
-            Progress::KeyHeld | Progress::DoorOpen | Progress::Escaped
-        );
+        let resolved = session.progress == Progress::KeyHeld || session.progress.door_is_open();
         let Some(synthesis) = &mut self.synthesis else {
             return;
         };
