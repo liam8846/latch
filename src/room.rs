@@ -2,9 +2,10 @@ mod builder;
 mod details;
 mod foyer;
 mod furniture;
+pub mod lightmaps;
 mod materials;
 pub mod signal;
-pub mod study_lighting;
+mod study_lighting;
 
 use crate::{Session, interaction::Target, physics::PressurePlate};
 use bevy::prelude::*;
@@ -91,7 +92,7 @@ pub fn setup(
             .unwrap_or_else(|_| Sphere::new(1.0).mesh().uv(12, 8)),
     );
     let palette = materials::build(&assets, &mut materials);
-    let study_lighting = study_lighting::StudyLightmaps::load(&assets);
+    let lighting = lightmaps::RoomLightmaps::load(&assets);
     let mut room = Furnisher {
         commands: &mut commands,
         meshes: &mut meshes,
@@ -102,7 +103,7 @@ pub fn setup(
     };
     room.block([0.0, -0.12, 0.0], [9.2, 0.2, 9.2], &palette.walnut);
     room.static_box([0.0, -0.0875, 1.0], [10.0, 0.2, 14.0]);
-    study_lighting::shell(&mut room, &palette, &study_lighting);
+    study_lighting::shell(&mut room, &palette, &lighting);
     for side in [-1.0, 1.0] {
         for height in [0.14, 1.0, 3.25] {
             room.block(
@@ -136,7 +137,7 @@ pub fn setup(
     room.ellipsoid([-0.13, 2.7, -4.28], [0.19, 0.19, 0.04], &palette.cream);
     details::curtains(&mut room, &palette.trim, &palette.brass);
     room.light(MOON_LIGHT.to_array(), [0.48, 0.63, 1.0], 1650.0, false);
-    study_lighting::desktop(&mut room, &palette, &study_lighting);
+    study_lighting::desktop(&mut room, &palette, &lighting);
     for leg in DESK_LEGS {
         room.solid_block(leg.center.to_array(), leg.size.to_array(), &palette.walnut);
     }
@@ -168,7 +169,7 @@ pub fn setup(
         intensity: 1550.0,
     });
     chair(&mut room, &assets);
-    shelves(&mut room, &palette, &study_lighting);
+    shelves(&mut room, &palette, &lighting);
     safe(&mut room, &palette.steel, &palette.brass, &palette.ink);
     balance_corner(&mut room, &assets, &palette);
     details::photograph(
@@ -214,9 +215,9 @@ pub fn setup(
         0.0,
         0.85,
     );
-    foyer::setup(&mut room, &assets, &palette);
-    signal::setup(&mut room, &palette);
-    room.commands.insert_resource(study_lighting);
+    foyer::setup(&mut room, &assets, &palette, &lighting);
+    signal::setup(&mut room, &palette, &lighting);
+    room.commands.insert_resource(lighting);
 }
 
 type MechanismAnimateQueries<'w, 's> = (

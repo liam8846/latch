@@ -1,6 +1,8 @@
 use super::{
     ClockHandPivot, ClockPendulum, Hinge, LeverHinge, LightKind, MoonMark, SwitchableLight,
-    builder::Furnisher, materials::Palette,
+    builder::Furnisher,
+    lightmaps::{self, BakedRoom, RoomLightmaps},
+    materials::Palette,
 };
 use crate::{
     interaction::Target,
@@ -8,11 +10,22 @@ use crate::{
 };
 use avian3d::prelude::*;
 use bevy::prelude::*;
-use latch::puzzle::{ClockHand, Lever};
+use latch::{
+    puzzle::{ClockHand, Lever},
+    room_lighting::{
+        FOYER_LANTERN, FOYER_PASSAGE_LIGHT, FOYER_SCONCE, PORCH_LIGHT, foyer_surfaces,
+    },
+};
 use std::f32::consts::{FRAC_PI_2, TAU};
 
 /// 建立與午夜書房南側出口無縫銜接的長廊與老宅玄關門廳，複用共用 PBR 材質與輕量模型。
-pub(super) fn setup(room: &mut Furnisher, assets: &AssetServer, palette: &Palette) {
+pub(super) fn setup(
+    room: &mut Furnisher,
+    assets: &AssetServer,
+    palette: &Palette,
+    lighting: &RoomLightmaps,
+) {
+    lightmaps::spawn_surfaces(room, palette, lighting, BakedRoom::Foyer, foyer_surfaces());
     corridor(room, palette);
     shell(room, palette);
     blocking_crate_and_timetable(room, assets, palette);
@@ -23,36 +36,34 @@ pub(super) fn setup(room: &mut Furnisher, assets: &AssetServer, palette: &Palett
 
 /// 建立連接書房與玄關的月光木廊（Z 4.6 至 7.0 公尺）。
 fn corridor(room: &mut Furnisher, palette: &Palette) {
-    room.block([1.9, 0.0, 5.8], [2.2, 0.025, 2.5], &palette.floor);
-    room.solid_block([1.9, 3.55, 5.8], [2.4, 0.1, 2.5], &palette.trim);
-    room.solid_block([0.85, 1.75, 5.8], [0.2, 3.5, 2.5], &palette.wall);
-    room.solid_block([2.95, 1.75, 5.8], [0.2, 3.5, 2.5], &palette.wall);
     for x in [0.97, 2.83] {
         room.block([x, 0.15, 5.8], [0.06, 0.22, 2.4], &palette.walnut);
         room.block([x, 1.0, 5.8], [0.05, 0.06, 2.4], &palette.brass);
     }
-    room.light([1.9, 2.35, 5.8], [0.75, 0.80, 1.0], 620.0, false);
+    room.light(
+        FOYER_PASSAGE_LIGHT.to_array(),
+        [0.75, 0.80, 1.0],
+        620.0,
+        false,
+    );
 }
 
 /// 建立玄關地板、四面牆、天花板、地毯與踢腳板（X -2.6 至 3.6，Z 7.0 至 13.6）。
 fn shell(room: &mut Furnisher, palette: &Palette) {
     room.block([0.5, -0.12, 10.3], [6.4, 0.2, 6.8], &palette.walnut);
     room.static_box([0.5, -0.0875, 12.0], [7.0, 0.2, 10.5]);
-    room.block([0.5, 0.0, 10.3], [6.4, 0.025, 6.8], &palette.floor);
-    room.solid_block([0.5, 3.55, 10.3], [6.6, 0.1, 6.8], &palette.trim);
-
-    room.solid_block([-0.85, 1.75, 7.0], [3.5, 3.5, 0.2], &palette.wall);
-    room.solid_block([3.25, 1.75, 7.0], [0.7, 3.5, 0.2], &palette.wall);
-    room.solid_block([1.9, 3.0, 7.0], [2.0, 1.0, 0.2], &palette.wall);
-    room.solid_block([-2.6, 1.75, 10.3], [0.2, 3.5, 6.8], &palette.wall);
-    room.solid_block([3.6, 1.75, 10.3], [0.2, 3.5, 6.8], &palette.wall);
-    room.solid_block([-1.5, 1.75, 13.6], [2.2, 3.5, 0.2], &palette.wall);
-    room.solid_block([2.5, 1.75, 13.6], [2.2, 3.5, 0.2], &palette.wall);
-    room.solid_block([0.5, 3.0, 13.6], [1.8, 1.0, 0.2], &palette.wall);
-
     for x in [-2.47, 3.47] {
         room.block([x, 0.52, 10.3], [0.05, 0.88, 6.4], &palette.walnut);
         room.block([x, 0.98, 10.3], [0.06, 0.06, 6.4], &palette.brass);
+        let inset = x - 0.055 * x.signum();
+        room.block([inset, 0.18, 10.3], [0.10, 0.075, 6.4], &palette.wood);
+        room.block([inset, 3.34, 10.3], [0.14, 0.11, 6.44], &palette.walnut);
+        for z in [7.54, 8.48, 9.42, 10.82, 11.76, 12.70, 13.26] {
+            room.block([inset, 0.55, z], [0.042, 0.66, 0.052], &palette.wood);
+        }
+    }
+    for (x, width) in [(-1.50, 2.12), (2.50, 2.12)] {
+        room.block([x, 0.17, 13.45], [width, 0.23, 0.08], &palette.walnut);
     }
     room.block([0.5, 0.032, 10.4], [2.4, 0.022, 4.4], &palette.rust);
     room.block([0.5, 0.046, 10.4], [2.16, 0.01, 4.16], &palette.cream);
@@ -274,14 +285,14 @@ fn foyer_props(room: &mut Furnisher, assets: &AssetServer, palette: &Palette) {
 
     room.block([3.44, 1.95, 12.2], [0.10, 0.24, 0.14], &palette.brass);
     room.sensor([3.40, 1.95, 12.2], [0.24, 0.36, 0.26], Target::FoyerLight);
-    let sconce = room.light([3.05, 1.98, 12.2], [1.0, 0.74, 0.44], 950.0, false);
+    let sconce = room.light(FOYER_SCONCE.to_array(), [1.0, 0.74, 0.44], 950.0, false);
     room.commands.entity(sconce).insert(SwitchableLight {
         kind: LightKind::FoyerLamp,
         on: true,
         intensity: 950.0,
     });
 
-    let lantern = room.light([0.5, 2.55, 10.3], [0.85, 0.82, 0.72], 1250.0, false);
+    let lantern = room.light(FOYER_LANTERN.to_array(), [0.85, 0.82, 0.72], 1250.0, false);
     room.commands.entity(lantern).insert(SwitchableLight {
         kind: LightKind::FoyerLamp,
         on: true,
@@ -345,9 +356,5 @@ fn front_door_and_moon_mark(room: &mut Furnisher, palette: &Palette) {
         .entity(pivot)
         .add_children(&[door, panel, handle, bolt_bar]);
 
-    room.block([0.5, 0.0, 15.1], [2.4, 0.06, 3.2], &palette.wood);
-    room.solid_block([-0.6, 1.65, 15.2], [0.2, 3.4, 3.2], &palette.wall);
-    room.solid_block([1.6, 1.65, 15.2], [0.2, 3.4, 3.2], &palette.wall);
-    room.solid_block([0.5, 3.4, 15.2], [2.4, 0.12, 3.2], &palette.trim);
-    room.light([0.5, 2.2, 15.3], [0.46, 0.62, 1.0], 720.0, false);
+    room.light(PORCH_LIGHT.to_array(), [0.46, 0.62, 1.0], 720.0, false);
 }

@@ -62,7 +62,7 @@ fn main() {
                 physics::update_pressure_plate,
                 interaction::focus_target,
                 room::animate,
-                room::study_lighting::update_study_lightmaps,
+                room::lightmaps::update_room_lightmaps,
                 room::signal::show_signals,
                 bridge::publish,
             )

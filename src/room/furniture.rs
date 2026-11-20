@@ -14,7 +14,7 @@ use latch::study::{SHELF_LEVELS, shelf_book, shelf_level, shelf_side};
 pub(super) fn shelves(
     room: &mut Furnisher,
     palette: &Palette,
-    lighting: &super::study_lighting::StudyLightmaps,
+    lighting: &super::lightmaps::RoomLightmaps,
 ) {
     let Palette {
         walnut,

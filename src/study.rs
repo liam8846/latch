@@ -33,7 +33,7 @@ pub struct Surface {
 
 impl Surface {
     /// 指定需烘焙的長方體內側面；normal 是世界座標的主軸單位向量。
-    const fn new(center: [f32; 3], size: [f32; 3], normal: Vec3) -> Self {
+    pub const fn new(center: [f32; 3], size: [f32; 3], normal: Vec3) -> Self {
         Self {
             geometry: BoxGeometry::new(center, size),
             normal,

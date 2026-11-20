@@ -1,13 +1,21 @@
-use super::{Hinge, builder::Furnisher, materials::Palette};
+use super::{
+    Hinge,
+    builder::Furnisher,
+    lightmaps::{self, BakedRoom, RoomLightmaps},
+    materials::Palette,
+};
 use crate::{Session, interaction::Target, physics::world_layers};
 use avian3d::prelude::*;
 use bevy::prelude::*;
-use latch::signal::{COLUMNS, Cell, Mirror, Orientation, ROWS, Signal, SignalBoard};
+use latch::{
+    room_lighting::{
+        GATE_X, PANEL_Z, SHORE_LIGHT, SIGNAL_ENTRY_LIGHT, SIGNAL_PANEL_LIGHT, signal_surfaces,
+    },
+    signal::{COLUMNS, Cell, Mirror, Orientation, ROWS, Signal, SignalBoard},
+};
 use std::f32::consts::FRAC_PI_4;
 
-const PANEL_Z: f32 = 23.40;
 const CELL_SIZE: f32 = 0.36;
-const GATE_X: f32 = -1.85;
 
 pub const ENTRY_Z: f32 = 16.9;
 pub const EXIT_Z: f32 = 25.0;
@@ -37,10 +45,18 @@ impl SignalDisplay {
 }
 
 /// 建立潮汐信號室、通往岸邊的門和共用一組鏡片的雙光路面板。
-pub(super) fn setup(room: &mut Furnisher, palette: &Palette) {
+pub(super) fn setup(room: &mut Furnisher, palette: &Palette, lighting: &RoomLightmaps) {
+    lightmaps::spawn_surfaces(
+        room,
+        palette,
+        lighting,
+        BakedRoom::Signal,
+        signal_surfaces(),
+    );
     shell(room, palette);
     gate(room, palette);
     board(room, palette);
+    instrumentation(room, palette);
 }
 
 /// 由面板格座標取得 3D 世界座標；玩家由北往南看，面板右方對應世界 -X。
@@ -60,10 +76,7 @@ fn point(cell: Cell, z: f32) -> Vec3 {
 /// 建立北側木廊出口、石質房間、牆面金屬結構與連通岸邊的小平台。
 fn shell(room: &mut Furnisher, palette: &Palette) {
     room.solid_block([0.5, -0.10, 20.1], [7.8, 0.2, 7.1], &palette.steel);
-    room.block([0.5, 0.011, 20.1], [7.6, 0.024, 7.1], &palette.wood);
-    room.solid_block([0.5, 3.76, 20.1], [7.8, 0.16, 7.1], &palette.trim);
-    for x in [-3.3, 4.3] {
-        room.solid_block([x, 1.87, 20.1], [0.2, 3.74, 7.0], &palette.wall);
+    for x in [-3.3_f32, 4.3] {
         for z in [17.35, 19.6, 21.85] {
             room.block(
                 [x.signum().mul_add(-0.13, x), 1.83, z],
@@ -72,21 +85,19 @@ fn shell(room: &mut Furnisher, palette: &Palette) {
             );
         }
     }
-    for x in [-1.95, 2.95] {
-        room.solid_block([x, 1.87, 16.7], [2.7, 3.74, 0.2], &palette.wall);
-    }
-    room.solid_block([0.5, 3.15, 16.7], [2.2, 1.18, 0.2], &palette.wall);
-    room.solid_block([-3.02, 1.87, 23.6], [0.56, 3.74, 0.2], &palette.wall);
-    room.solid_block([1.68, 1.87, 23.6], [5.30, 3.74, 0.2], &palette.wall);
-    room.solid_block([GATE_X, 3.10, 23.6], [1.78, 1.28, 0.2], &palette.wall);
-    room.solid_block([GATE_X, -0.10, 24.86], [2.10, 0.2, 2.96], &palette.wood);
-    for x in [GATE_X - 1.0, GATE_X + 1.0] {
-        room.solid_block([x, 1.28, 24.9], [0.17, 2.56, 2.72], &palette.wall);
-    }
-    room.solid_block([GATE_X, 1.75, 26.27], [2.2, 3.5, 0.16], &palette.moon);
-    room.light([GATE_X, 2.35, 25.4], [0.34, 0.65, 1.0], 640.0, false);
-    room.light([0.5, 2.95, 18.0], [0.41, 0.67, 0.91], 1050.0, false);
-    room.light([1.55, 2.95, 21.55], [0.90, 0.68, 0.41], 1000.0, false);
+    room.light(SHORE_LIGHT.to_array(), [0.34, 0.65, 1.0], 640.0, false);
+    room.light(
+        SIGNAL_ENTRY_LIGHT.to_array(),
+        [0.41, 0.67, 0.91],
+        1050.0,
+        false,
+    );
+    room.light(
+        SIGNAL_PANEL_LIGHT.to_array(),
+        [0.90, 0.68, 0.41],
+        1000.0,
+        false,
+    );
     for x in [-2.53, -1.17] {
         for i in 0..14 {
             room.block(
@@ -95,6 +106,42 @@ fn shell(room: &mut Furnisher, palette: &Palette) {
                 &palette.brass,
             );
         }
+    }
+}
+
+/// 沿機械盤外圍加上線槽、固定座和加強肋；零件避開鏡片和操作牌的感應區。
+fn instrumentation(room: &mut Furnisher, palette: &Palette) {
+    for x in [-3.145, 4.145] {
+        room.block([x, 0.30, 20.1], [0.095, 0.48, 6.83], &palette.steel);
+        room.block([x, 0.57, 20.1], [0.10, 0.042, 6.83], &palette.brass);
+        for z in [17.35, 19.60, 21.85] {
+            room.block([x, 0.16, z], [0.22, 0.28, 0.28], &palette.wood);
+            room.block([x, 3.49, z], [0.20, 0.17, 0.30], &palette.steel);
+        }
+    }
+    let channel_x = 3.58;
+    room.block(
+        [channel_x, 1.78, 23.42],
+        [0.082, 3.20, 0.095],
+        &palette.brass,
+    );
+    room.block([3.42, 3.34, 23.42], [0.32, 0.086, 0.095], &palette.brass);
+    for y in [0.45, 1.42, 2.42, 3.20] {
+        room.block([channel_x, y, 23.38], [0.16, 0.079, 0.045], &palette.steel);
+    }
+    for x in [-0.02, 3.12] {
+        for y in [0.48, 3.26] {
+            room.ellipsoid([x, y, 23.335], [0.027, 0.027, 0.015], &palette.brass);
+        }
+    }
+    for [x, y, z] in [SIGNAL_ENTRY_LIGHT.to_array(), SIGNAL_PANEL_LIGHT.to_array()] {
+        room.block([x, 3.65, z], [0.44, 0.075, 0.44], &palette.steel);
+        room.block(
+            [x, (3.65 + y) * 0.5, z],
+            [0.055, 3.65 - y, 0.055],
+            &palette.brass,
+        );
+        room.ellipsoid([x, y + 0.08, z], [0.21, 0.07, 0.21], &palette.steel);
     }
 }
 

@@ -1,14 +1,18 @@
 #![forbid(unsafe_code)]
 
+#[path = "bake_study/rooms.rs"]
+mod rooms;
+
 use bevy::{
     asset::RenderAssetUsages,
     math::{Vec2, Vec3, vec3},
     prelude::Image,
     render::render_resource::{Extent3d, TextureDimension, TextureFormat},
 };
+use latch::room_lighting::{FOYER_LIT, FOYER_NIGHT, SIGNAL_ATLAS, atlas_height};
 use latch::study::{
-    ATLAS_HEIGHT, ATLAS_WIDTH, BoxGeometry, DESK_LEGS, DESK_LIGHT, LAMP_ATLAS, LIGHTMAP_EXPOSURE,
-    MOON_ATLAS, MOON_LIGHT, PADDING, SHELF_LEVELS, SURFACES, TILE_SIZE, shelf_book, shelf_level,
+    ATLAS_WIDTH, BoxGeometry, DESK_LEGS, DESK_LIGHT, LAMP_ATLAS, LIGHTMAP_EXPOSURE, MOON_ATLAS,
+    MOON_LIGHT, PADDING, SHELF_LEVELS, SURFACES, Surface, TILE_SIZE, shelf_book, shelf_level,
     shelf_side, tile_origin,
 };
 use std::{
@@ -196,8 +200,30 @@ fn direct(scene: &[Shape], p: Vec3, normal: Vec3, lamp: Lamp) -> Vec3 {
     lamp.color * (lamp.lumens / (2.0 * TAU) * incidence / distance.powi(2).max(0.18))
 }
 
+#[derive(Clone, Copy)]
+struct Lighting {
+    fill: Vec3,
+    fixed: &'static [Lamp],
+    switched: &'static [Lamp],
+}
+
+const STUDY: Lighting = Lighting {
+    fill: FILL,
+    fixed: &[MOON],
+    switched: &[DESK],
+};
+const FOYER: Lighting = Lighting {
+    fill: rooms::FOYER_FILL,
+    fixed: &rooms::FOYER_FIXED,
+    switched: &rooms::FOYER_SWITCHED,
+};
+const SIGNAL_ROOM: Lighting = Lighting {
+    fill: rooms::SIGNAL_FILL,
+    fixed: &rooms::SIGNAL_LIGHTS,
+    switched: &[],
+};
 /// 取樣單一漫反射反彈，並用衰減距離近似牆角與接地處的環境遮蔽。
-fn trace_indirect(scene: &[Shape], p: Vec3, normal: Vec3) -> (Vec3, Vec3) {
+fn trace_indirect(scene: &[Shape], p: Vec3, normal: Vec3, lighting: Lighting) -> (Vec3, Vec3) {
     let tangent = if normal.y.abs() > 0.5 {
         Vec3::X
     } else {
@@ -217,22 +243,28 @@ fn trace_indirect(scene: &[Shape], p: Vec3, normal: Vec3) -> (Vec3, Vec3) {
         {
             let hit = start + direction * distance + hit_normal * EPSILON;
             let openness = 1.0 - 0.85 * (-distance / 0.62).exp();
-            ambient += FILL * openness + direct(scene, hit, hit_normal, MOON) * shape.albedo;
-            warm += direct(scene, hit, hit_normal, DESK) * shape.albedo;
+            let incoming = |lights: &[Lamp]| {
+                lights
+                    .iter()
+                    .map(|&lamp| direct(scene, hit, hit_normal, lamp))
+                    .sum::<Vec3>()
+                    * shape.albedo
+            };
+            ambient += lighting.fill * openness + incoming(lighting.fixed);
+            warm += incoming(lighting.switched);
         } else {
-            ambient += FILL;
+            ambient += lighting.fill;
         }
     }
     (ambient / SAMPLES as f32, warm / SAMPLES as f32)
 }
 
 /// 計算一整個表面的月光和桌燈狀態；同一次追蹤共用樣本。
-fn bake_tile(scene: &[Shape], index: usize) -> Vec<[Vec3; 2]> {
-    let surface = SURFACES[index];
+fn bake_tile(surface: Surface, scene: &[Shape], lighting: Lighting) -> Vec<[Vec3; 2]> {
     (0..SIDE * SIDE)
         .map(|pixel| {
             let uv = Vec2::new((pixel % SIDE) as f32, (pixel / SIDE) as f32) / (SIDE - 1) as f32;
-            let (moon, warm) = trace_indirect(scene, surface.point(uv), surface.normal);
+            let (moon, warm) = trace_indirect(scene, surface.point(uv), surface.normal, lighting);
             [moon, moon + warm]
         })
         .collect()
@@ -274,7 +306,7 @@ fn rgba(color: Vec3) -> [u8; 4] {
     [r, g, b, 255]
 }
 
-/// 產出可供遊戲載入的 PNG，或可直接查看的比較圖。
+/// 產出可供遊戲載入的光照圖集 PNG。
 fn save_png(
     destination: &Path,
     width: u32,
@@ -297,31 +329,52 @@ fn save_png(
     Ok(())
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets");
-    fs::create_dir_all(root.join("lighting"))?;
-    let scene = scene();
-    let tiles = thread::scope(|scope| {
-        let scene = &scene;
-        let jobs: Vec<_> = (0..SURFACES.len())
-            .map(|i| scope.spawn(move || bake_tile(scene, i)))
+/// 烘焙指定房間的所有圖塊，並依燈具狀態輸出圖集。
+fn bake(
+    root: &Path,
+    surfaces: &[Surface],
+    geometry: &[Shape],
+    lighting: Lighting,
+    outputs: &[&str],
+) -> Result<(), Box<dyn Error>> {
+    let jobs = thread::scope(|scope| {
+        let workers: Vec<_> = surfaces
+            .iter()
+            .map(|&surface| scope.spawn(move || bake_tile(surface, geometry, lighting)))
             .collect();
-        jobs.into_iter()
+        workers
+            .into_iter()
             .map(|job| job.join().map_err(|_| "a lightmap worker panicked"))
             .collect::<Result<Vec<_>, _>>()
     })?;
-    for (mode, relative) in [MOON_ATLAS, LAMP_ATLAS].into_iter().enumerate() {
-        let mut atlas = vec![0; (ATLAS_WIDTH * ATLAS_HEIGHT * 4) as usize];
-        for (index, tile) in tiles.iter().enumerate() {
+    let height = atlas_height(surfaces.len());
+    for (mode, relative) in outputs.iter().enumerate() {
+        let mut atlas = vec![0; (ATLAS_WIDTH * height * 4) as usize];
+        for (index, tile) in jobs.iter().enumerate() {
             write_tile(&mut atlas, tile, index as u32, mode);
         }
         let path = root.join(relative);
-        save_png(&path, ATLAS_WIDTH, ATLAS_HEIGHT, atlas)?;
+        save_png(&path, ATLAS_WIDTH, height, atlas)?;
         println!("{}", path.display());
     }
     Ok(())
 }
 
+fn main() -> Result<(), Box<dyn Error>> {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets");
+    fs::create_dir_all(root.join("lighting"))?;
+    bake(&root, &SURFACES, &scene(), STUDY, &[MOON_ATLAS, LAMP_ATLAS])?;
+    let (surfaces, geometry) = rooms::foyer();
+    bake(
+        &root,
+        &surfaces,
+        &geometry,
+        FOYER,
+        &[FOYER_NIGHT, FOYER_LIT],
+    )?;
+    let (surfaces, geometry) = rooms::signal();
+    bake(&root, &surfaces, &geometry, SIGNAL_ROOM, &[SIGNAL_ATLAS])
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -332,16 +385,37 @@ mod tests {
         let scene = scene();
         let floor_height = FLOOR.point(Vec2::splat(0.5)).y;
         let foot = DESK_LEGS[3].center;
-        let (contact, _) =
-            trace_indirect(&scene, vec3(foot.x + 0.08, floor_height, foot.z), Vec3::Y);
-        let (open, _) = trace_indirect(&scene, vec3(2.6, floor_height, -2.1), Vec3::Y);
+        let (contact, _) = trace_indirect(
+            &scene,
+            vec3(foot.x + 0.08, floor_height, foot.z),
+            Vec3::Y,
+            STUDY,
+        );
+        let (open, _) = trace_indirect(&scene, vec3(2.6, floor_height, -2.1), Vec3::Y, STUDY);
         assert!(contact.element_sum() < open.element_sum());
     }
 
     #[test]
     fn desk_lamp_adds_warm_bounce_to_the_window_wall() {
         let scene = scene();
-        let (_, lamp) = trace_indirect(&scene, vec3(-0.1, 1.15, -4.5), Vec3::Z);
+        let (_, lamp) = trace_indirect(&scene, vec3(-0.1, 1.15, -4.5), Vec3::Z, STUDY);
         assert!(lamp.x > 0.1 && lamp.x > lamp.y && lamp.y > lamp.z);
+    }
+
+    #[test]
+    fn foyer_night_keeps_cool_light_without_warm_lamp_bounce() {
+        let (_, geometry) = rooms::foyer();
+        let (night, warm) = trace_indirect(&geometry, vec3(2.9, 0.013, 12.1), Vec3::Y, FOYER);
+        assert!(night.z > night.x && night.x > 0.0);
+        assert!(warm.x > warm.z && warm.x > 0.1);
+    }
+
+    #[test]
+    fn signal_room_bakes_only_fixed_lights() {
+        let (_, geometry) = rooms::signal();
+        let (fixed, switched) =
+            trace_indirect(&geometry, vec3(0.5, 0.023, 20.0), Vec3::Y, SIGNAL_ROOM);
+        assert!(fixed.element_sum() > 0.0);
+        assert_eq!(switched, Vec3::ZERO);
     }
 }
