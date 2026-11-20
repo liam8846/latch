@@ -24,7 +24,7 @@ fn main() {
         .insert_resource(GlobalAmbientLight {
             color: Color::srgb(0.8, 0.88, 0.85),
             brightness: 75.0,
-            ..default()
+            affects_lightmapped_meshes: false,
         })
         .init_resource::<Session>()
         .init_resource::<session::UiCommands>()
@@ -62,6 +62,7 @@ fn main() {
                 physics::update_pressure_plate,
                 interaction::focus_target,
                 room::animate,
+                room::study_lighting::update_study_lightmaps,
                 room::signal::show_signals,
                 bridge::publish,
             )

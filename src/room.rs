@@ -4,12 +4,16 @@ mod foyer;
 mod furniture;
 mod materials;
 pub mod signal;
+pub mod study_lighting;
 
 use crate::{Session, interaction::Target, physics::PressurePlate};
 use bevy::prelude::*;
 use builder::Furnisher;
 use furniture::{balance_corner, chair, desk_drawer, exit, safe, shelves};
-use latch::puzzle::{ClockHand, Lever, Progress};
+use latch::{
+    puzzle::{ClockHand, Lever, Progress},
+    study::{CEILING_LIGHT, DESK_LEGS, DESK_LIGHT, MOON_LIGHT},
+};
 
 #[derive(Component)]
 pub enum Hinge {
@@ -87,6 +91,7 @@ pub fn setup(
             .unwrap_or_else(|_| Sphere::new(1.0).mesh().uv(12, 8)),
     );
     let palette = materials::build(&assets, &mut materials);
+    let study_lighting = study_lighting::StudyLightmaps::load(&assets);
     let mut room = Furnisher {
         commands: &mut commands,
         meshes: &mut meshes,
@@ -97,14 +102,7 @@ pub fn setup(
     };
     room.block([0.0, -0.12, 0.0], [9.2, 0.2, 9.2], &palette.walnut);
     room.static_box([0.0, -0.0875, 1.0], [10.0, 0.2, 14.0]);
-    room.block([0.0, 0.0, 0.0], [9.2, 0.025, 9.2], &palette.floor);
-    room.solid_block([0.0, 1.75, -4.6], [9.2, 3.5, 0.2], &palette.wall);
-    room.solid_block([-4.6, 1.75, 0.0], [0.2, 3.5, 9.2], &palette.wall);
-    room.solid_block([4.6, 1.75, 0.0], [0.2, 3.5, 9.2], &palette.wall);
-    room.solid_block([-1.8, 1.75, 4.6], [5.6, 3.5, 0.2], &palette.wall);
-    room.solid_block([3.7, 1.75, 4.6], [1.8, 3.5, 0.2], &palette.wall);
-    room.solid_block([1.9, 3.0, 4.6], [1.8, 1.0, 0.2], &palette.wall);
-    room.solid_block([0.0, 3.55, 0.0], [9.3, 0.1, 9.3], &palette.trim);
+    study_lighting::shell(&mut room, &palette, &study_lighting);
     for side in [-1.0, 1.0] {
         for height in [0.14, 1.0, 3.25] {
             room.block(
@@ -137,12 +135,13 @@ pub fn setup(
     room.solid_block([-0.9, 1.12, -4.17], [2.9, 0.12, 0.42], &palette.wood);
     room.ellipsoid([-0.13, 2.7, -4.28], [0.19, 0.19, 0.04], &palette.cream);
     details::curtains(&mut room, &palette.trim, &palette.brass);
-    room.light([-0.8, 2.65, -3.9], [0.48, 0.63, 1.0], 1650.0, false);
-    room.solid_block([-0.8, 0.94, -2.85], [2.65, 0.13, 1.12], &palette.wood);
+    room.light(MOON_LIGHT.to_array(), [0.48, 0.63, 1.0], 1650.0, false);
+    study_lighting::desktop(&mut room, &palette, &study_lighting);
+    for leg in DESK_LEGS {
+        room.solid_block(leg.center.to_array(), leg.size.to_array(), &palette.walnut);
+    }
     for x in [-1.93, 0.33] {
-        for z in [-3.27, -2.43] {
-            room.solid_block([x, 0.44, z], [0.12, 0.87, 0.12], &palette.walnut);
-        }
+        room.block([x, 0.12, -2.43], [0.135, 0.042, 0.135], &palette.brass);
     }
     desk_drawer(&mut room, &palette.walnut, &palette.wood, &palette.brass);
     room.block([-0.65, 1.023, -2.56], [0.47, 0.015, 0.34], &palette.cream);
@@ -162,14 +161,14 @@ pub fn setup(
         0.72,
     );
     room.sensor([0.18, 1.32, -3.05], [0.30, 0.62, 0.30], Target::DeskLamp);
-    let desk_light = room.light([0.18, 1.42, -2.92], [1.0, 0.72, 0.42], 1550.0, true);
+    let desk_light = room.light(DESK_LIGHT.to_array(), [1.0, 0.72, 0.42], 1550.0, true);
     room.commands.entity(desk_light).insert(SwitchableLight {
         kind: LightKind::DeskLamp,
         on: true,
         intensity: 1550.0,
     });
     chair(&mut room, &assets);
-    shelves(&mut room, &palette.walnut, &palette.wood, &palette.brass);
+    shelves(&mut room, &palette, &study_lighting);
     safe(&mut room, &palette.steel, &palette.brass, &palette.ink);
     balance_corner(&mut room, &assets, &palette);
     details::photograph(
@@ -202,7 +201,7 @@ pub fn setup(
     room.block([0.52, 1.32, 4.46], [0.11, 0.16, 0.04], &palette.brass);
     room.block([0.52, 1.32, 4.43], [0.03, 0.05, 0.03], &palette.walnut);
     room.sensor([0.52, 1.32, 4.44], [0.22, 0.24, 0.12], Target::WallSwitch);
-    let main_light = room.light([0.0, 2.55, 0.1], [1.0, 0.78, 0.51], 1800.0, true);
+    let main_light = room.light(CEILING_LIGHT.to_array(), [1.0, 0.78, 0.51], 1800.0, true);
     room.commands.entity(main_light).insert(SwitchableLight {
         kind: LightKind::Chandelier,
         on: true,
@@ -217,6 +216,7 @@ pub fn setup(
     );
     foyer::setup(&mut room, &assets, &palette);
     signal::setup(&mut room, &palette);
+    room.commands.insert_resource(study_lighting);
 }
 
 type MechanismAnimateQueries<'w, 's> = (

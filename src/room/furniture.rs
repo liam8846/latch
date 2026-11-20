@@ -8,18 +8,30 @@ use crate::{
 };
 use avian3d::prelude::*;
 use bevy::prelude::*;
+use latch::study::{SHELF_LEVELS, shelf_book, shelf_level, shelf_side};
 
 /// 建立西側書架與有節奏的書脊，維持低面數以兼顧網頁 WebGPU 效能。
 pub(super) fn shelves(
     room: &mut Furnisher,
-    walnut: &Handle<StandardMaterial>,
-    wood: &Handle<StandardMaterial>,
-    brass: &Handle<StandardMaterial>,
+    palette: &Palette,
+    lighting: &super::study_lighting::StudyLightmaps,
 ) {
-    room.block([-4.06, 1.24, 1.42], [0.64, 2.48, 2.8], walnut);
-    room.block([-3.71, 1.32, 1.42], [0.08, 2.33, 2.63], wood);
-    for y in [0.22, 0.83, 1.44, 2.05, 2.52] {
-        room.block([-3.68, y, 1.42], [0.85, 0.07, 2.87], walnut);
+    let Palette {
+        walnut,
+        wood,
+        brass,
+        ..
+    } = palette;
+    super::study_lighting::shelf_back(room, wood, lighting);
+    for z in [0.02, 2.82] {
+        let side = shelf_side(z);
+        room.block(side.center.to_array(), side.size.to_array(), walnut);
+        room.block([-3.24, 1.34, z], [0.055, 2.39, 0.103], wood);
+    }
+    for y in SHELF_LEVELS {
+        let board = shelf_level(y);
+        room.block(board.center.to_array(), board.size.to_array(), walnut);
+        room.block([-3.238, y, 1.42], [0.037, 0.048, 2.78], wood);
     }
     let covers = [
         room.material([0.22, 0.31, 0.26], 0.0),
@@ -30,11 +42,14 @@ pub(super) fn shelves(
     for tier in 0..3 {
         for i in 0..13 {
             let cover = &covers[i % 4];
-            let height = 0.31 + ((i * 3 + tier) % 5) as f32 * 0.04;
-            let z = 0.18 + i as f32 * 0.2;
-            let y = 0.27 + tier as f32 * 0.61 + height * 0.5;
-            room.block([-3.6, y, z], [0.38, height, 0.14], cover);
-            room.block([-3.4, y + height * 0.22, z], [0.012, 0.016, 0.13], brass);
+            let book = shelf_book(tier, i);
+            let [x, y, z] = book.center.to_array();
+            room.block(book.center.to_array(), book.size.to_array(), cover);
+            room.block(
+                [x + 0.194, y + book.size.y * 0.22, z],
+                [0.012, 0.016, 0.12],
+                brass,
+            );
         }
     }
     let shelf_box = room.static_box([-3.94, 1.3, 1.42], [1.0, 2.6, 2.9]);
