@@ -12,6 +12,7 @@ use bevy::{ecs::system::SystemParam, prelude::*};
 use latch::{
     i18n::MessageKey,
     puzzle::{Action, ClockFace, ClockHand, Lever, Progress, Reply},
+    signal::{Mirror, Signal, SignalBoard},
 };
 
 #[derive(Clone, Copy, Component, PartialEq, Eq)]
@@ -37,6 +38,9 @@ pub enum Target {
     Mailbox,
     CoatRack,
     FoyerLight,
+    SignalMirror(Mirror),
+    SignalManual,
+    SignalGate,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -92,6 +96,9 @@ impl FocusTarget {
             Self::Static(Target::Mailbox) => MessageKey::InspectMailbox,
             Self::Static(Target::CoatRack) => MessageKey::InspectCoatRack,
             Self::Static(Target::FoyerLight) => MessageKey::ToggleFoyerLight,
+            Self::Static(Target::SignalMirror(_)) => MessageKey::TurnSignalMirror,
+            Self::Static(Target::SignalManual) => MessageKey::ReadSignalManual,
+            Self::Static(Target::SignalGate) => MessageKey::InspectSignalGate,
         }
     }
 }
@@ -121,6 +128,7 @@ pub struct WorldAct<'w, 's> {
 pub fn focus_target(
     spatial: SpatialQuery,
     held: Res<HeldProp>,
+    session: Res<Session>,
     player: Query<&Transform, With<Player>>,
     lookup: FocusLookup,
     mut focus: ResMut<Focus>,
@@ -153,7 +161,11 @@ pub fn focus_target(
                 return;
             }
             if let Ok(target) = lookup.targets.get(entity) {
-                focus.0 = Some(FocusTarget::Static(*target));
+                if !matches!(target, Target::SignalMirror(_))
+                    || session.progress == Progress::SignalRoom
+                {
+                    focus.0 = Some(FocusTarget::Static(*target));
+                }
                 return;
             }
             current = lookup.parents.get(entity).ok().map(ChildOf::parent);
@@ -206,6 +218,7 @@ pub fn act(
             UiCommand::Restart => {
                 session.progress.apply(Action::Restart);
                 session.clock = ClockFace::default();
+                session.signal_board = SignalBoard::default();
                 session.screen = Screen::Playing;
                 session.notify(MessageKey::Restarted, SoundCue::Start);
                 world.reset.0 = true;
@@ -406,7 +419,40 @@ fn interact(session: &mut Session, world: &mut WorldAct, target: Option<FocusTar
                 MessageKey::FoyerLightOff,
             );
         }
+        Some(FocusTarget::Static(Target::SignalMirror(mirror))) => {
+            turn_signal_mirror(session, mirror)
+        }
+        Some(FocusTarget::Static(Target::SignalManual)) => {
+            session.screen = Screen::Inspect(Exhibit::SignalManual);
+        }
+        Some(FocusTarget::Static(Target::SignalGate)) => {
+            let message = if session.progress.signal_gate_is_open() {
+                MessageKey::ObjectiveSignalGate
+            } else {
+                MessageKey::SignalGateLocked
+            };
+            session.notify(message, SoundCue::Tap);
+        }
         None => {}
+    }
+}
+
+/// 調整鏡片後立即反映兩座接收器的狀態；閘門接電後鎖定鏡片檔位。
+fn turn_signal_mirror(session: &mut Session, mirror: Mirror) {
+    if session.progress != Progress::SignalRoom {
+        return;
+    }
+    let [amber, blue] = Signal::ALL.map(|signal| session.signal_board.trace(signal).received);
+    session.signal_board.turn(mirror);
+    let board = session.signal_board;
+    if session.progress.apply(Action::AlignSignals(board)) == Reply::SignalGateUnlocked {
+        session.notify(MessageKey::SignalGateUnlocked, SoundCue::Unlock);
+    } else if !amber && board.trace(Signal::Amber).received {
+        session.notify(MessageKey::AmberReceived, SoundCue::Chime);
+    } else if !blue && board.trace(Signal::Blue).received {
+        session.notify(MessageKey::BlueReceived, SoundCue::Chime);
+    } else {
+        session.notify(MessageKey::SignalMirrorTurned, SoundCue::Tap);
     }
 }
 

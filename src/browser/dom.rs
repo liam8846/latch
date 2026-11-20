@@ -120,7 +120,7 @@ impl Dom {
             let _ = html.set_attribute("lang", localizer.locale().tag());
         }
         let mut args = FluentArgs::new();
-        args.set("minutes", 5);
+        args.set("minutes", 10);
         self.text(
             "intro-duration",
             &localizer.text("intro-duration", Some(&args)),

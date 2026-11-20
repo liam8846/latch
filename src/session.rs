@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use latch::{
     i18n::MessageKey,
     puzzle::{ClockFace, Progress},
+    signal::SignalBoard,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -11,6 +12,7 @@ pub enum Exhibit {
     Letter,
     Timetable,
     MoonMark,
+    SignalManual,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -60,6 +62,7 @@ pub struct Notice {
 pub struct Session {
     pub progress: Progress,
     pub clock: ClockFace,
+    pub signal_board: SignalBoard,
     pub screen: Screen,
     pub notice: Option<Notice>,
     pub revision: u32,

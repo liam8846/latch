@@ -1,6 +1,7 @@
 use crate::{
     Screen, Session, bridge,
     physics::{GameLayer, Pushable},
+    room::signal::{ENTRY_Z, EXIT_Z},
     session::SoundCue,
 };
 use avian3d::prelude::*;
@@ -132,7 +133,11 @@ pub fn move_player(
         session.progress.apply(Action::EnterFoyer);
         session.notify(MessageKey::FoyerEntered, SoundCue::Tap);
     }
-    if session.progress == Progress::FrontDoorOpen && transform.translation.z > 14.9 {
+    if session.progress == Progress::FrontDoorOpen && transform.translation.z > ENTRY_Z {
+        session.progress.apply(Action::EnterSignalRoom);
+        session.notify(MessageKey::SignalRoomEntered, SoundCue::Tap);
+    }
+    if session.progress.signal_gate_is_open() && transform.translation.z > EXIT_Z {
         session.progress.apply(Action::Leave);
         session.screen = Screen::Won;
         session.notify(MessageKey::Escaped, SoundCue::Win);

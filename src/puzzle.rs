@@ -1,3 +1,4 @@
+use crate::signal::SignalBoard;
 use std::f32::consts::TAU;
 
 pub const REQUIRED_PLATE_MASS_KG: f32 = 1.5;
@@ -67,6 +68,8 @@ pub enum Progress {
     FoyerStep2,
     FoyerStep3,
     FrontDoorOpen,
+    SignalRoom,
+    SignalGateOpen,
     Escaped,
 }
 
@@ -79,6 +82,8 @@ pub enum Action {
     EnterFoyer,
     SyncClock,
     PullLever(Lever),
+    EnterSignalRoom,
+    AlignSignals(SignalBoard),
     Leave,
     Restart,
 }
@@ -98,13 +103,15 @@ pub enum Reply {
     LeverEngaged,
     LeversReset,
     FrontDoorUnlocked,
+    SignalRoomEntered,
+    SignalGateUnlocked,
     Escaped,
     Restarted,
     Unchanged,
 }
 
 impl Progress {
-    /// 套用單一玩家動作；書房完成後無縫進入玄關，須先將掛鐘校時至 22:35，再依回程順序 IV → II → I → III 拉下四道拉桿。
+    /// 依序套用書房、玄關與潮汐信號室的進度；只有兩束光同時對準才能打開最後的閘門。
     pub fn apply(&mut self, action: Action) -> Reply {
         let (next, reply) = match (*self, action) {
             (_, Action::Restart) => (Self::Searching, Reply::Restarted),
@@ -144,7 +151,13 @@ impl Progress {
                 Self::FoyerClockSynced | Self::FoyerStep1 | Self::FoyerStep2 | Self::FoyerStep3,
                 Action::PullLever(_),
             ) => (Self::FoyerClockSynced, Reply::LeversReset),
-            (Self::FrontDoorOpen, Action::Leave) => (Self::Escaped, Reply::Escaped),
+            (Self::FrontDoorOpen, Action::EnterSignalRoom) => {
+                (Self::SignalRoom, Reply::SignalRoomEntered)
+            }
+            (Self::SignalRoom, Action::AlignSignals(board)) if board.is_aligned() => {
+                (Self::SignalGateOpen, Reply::SignalGateUnlocked)
+            }
+            (Self::SignalGateOpen, Action::Leave) => (Self::Escaped, Reply::Escaped),
             _ => (*self, Reply::Unchanged),
         };
         *self = next;
@@ -173,38 +186,36 @@ impl Progress {
     pub fn foyer_clock_synced(self) -> bool {
         matches!(
             self,
-            Self::FoyerClockSynced
-                | Self::FoyerStep1
-                | Self::FoyerStep2
-                | Self::FoyerStep3
-                | Self::FrontDoorOpen
-                | Self::Escaped
-        )
+            Self::FoyerClockSynced | Self::FoyerStep1 | Self::FoyerStep2 | Self::FoyerStep3
+        ) || self.front_door_is_open()
     }
 
     /// 表示指定玄關黃銅拉桿目前處於扣下位置，完全由唯一進度導出。
     pub fn lever_is_down(self, lever: Lever) -> bool {
         match lever {
-            Lever::Four => matches!(
-                self,
-                Self::FoyerStep1
-                    | Self::FoyerStep2
-                    | Self::FoyerStep3
-                    | Self::FrontDoorOpen
-                    | Self::Escaped
-            ),
-            Lever::Two => matches!(
-                self,
-                Self::FoyerStep2 | Self::FoyerStep3 | Self::FrontDoorOpen | Self::Escaped
-            ),
-            Lever::One => matches!(self, Self::FoyerStep3 | Self::FrontDoorOpen | Self::Escaped),
-            Lever::Three => matches!(self, Self::FrontDoorOpen | Self::Escaped),
+            Lever::Four => {
+                matches!(self, Self::FoyerStep1 | Self::FoyerStep2 | Self::FoyerStep3)
+                    || self.front_door_is_open()
+            }
+            Lever::Two => {
+                matches!(self, Self::FoyerStep2 | Self::FoyerStep3) || self.front_door_is_open()
+            }
+            Lever::One => self == Self::FoyerStep3 || self.front_door_is_open(),
+            Lever::Three => self.front_door_is_open(),
         }
     }
 
     /// 表示玄關臨街大門已解鎖，供門板碰撞與離場判定取用。
     pub fn front_door_is_open(self) -> bool {
-        matches!(self, Self::FrontDoorOpen | Self::Escaped)
+        matches!(
+            self,
+            Self::FrontDoorOpen | Self::SignalRoom | Self::SignalGateOpen | Self::Escaped
+        )
+    }
+
+    /// 表示潮汐信號室的出口閘門已解鎖。
+    pub fn signal_gate_is_open(self) -> bool {
+        matches!(self, Self::SignalGateOpen | Self::Escaped)
     }
 
     /// 表示玩家已從書房無縫走進玄關區域。
@@ -242,7 +253,7 @@ pub fn parse_code(input: &str) -> Option<[u8; 4]> {
 mod tests {
     use super::*;
 
-    const ALL_STAGES: [Progress; 12] = [
+    const ALL_STAGES: [Progress; 14] = [
         Progress::Searching,
         Progress::LatchReleased,
         Progress::SafeOpen,
@@ -254,6 +265,8 @@ mod tests {
         Progress::FoyerStep2,
         Progress::FoyerStep3,
         Progress::FrontDoorOpen,
+        Progress::SignalRoom,
+        Progress::SignalGateOpen,
         Progress::Escaped,
     ];
 
@@ -286,7 +299,14 @@ mod tests {
     }
 
     #[test]
-    fn player_completes_study_and_clock_foyer_then_restarts() {
+    fn player_completes_all_three_rooms_then_restarts() {
+        use crate::signal::Mirror;
+        let mut aligned = SignalBoard::default();
+        for (mirror, turns) in Mirror::ALL.into_iter().zip([2, 2, 0, 1, 2, 1, 0]) {
+            for _ in 0..turns {
+                aligned.turn(mirror);
+            }
+        }
         let mut game = Progress::default();
         for (action, reply) in [
             (Action::ReleaseLatch, Reply::LatchReleased),
@@ -300,6 +320,15 @@ mod tests {
             (Action::PullLever(Lever::Two), Reply::LeverEngaged),
             (Action::PullLever(Lever::One), Reply::LeverEngaged),
             (Action::PullLever(Lever::Three), Reply::FrontDoorUnlocked),
+            (Action::Leave, Reply::Unchanged),
+            (Action::AlignSignals(aligned), Reply::Unchanged),
+            (Action::EnterSignalRoom, Reply::SignalRoomEntered),
+            (Action::Leave, Reply::Unchanged),
+            (
+                Action::AlignSignals(SignalBoard::default()),
+                Reply::Unchanged,
+            ),
+            (Action::AlignSignals(aligned), Reply::SignalGateUnlocked),
             (Action::Leave, Reply::Escaped),
             (Action::Restart, Reply::Restarted),
         ] {
@@ -363,6 +392,8 @@ mod tests {
                 Action::PullLever(Lever::Two),
                 Action::PullLever(Lever::Three),
                 Action::PullLever(Lever::Four),
+                Action::EnterSignalRoom,
+                Action::AlignSignals(SignalBoard::default()),
                 Action::Leave,
             ] {
                 let mut game = progress;
@@ -414,7 +445,13 @@ mod tests {
             );
             assert_eq!(
                 progress.front_door_is_open(),
-                matches!(progress, Progress::FrontDoorOpen | Progress::Escaped)
+                matches!(
+                    progress,
+                    Progress::FrontDoorOpen
+                        | Progress::SignalRoom
+                        | Progress::SignalGateOpen
+                        | Progress::Escaped
+                )
             );
             assert_eq!(
                 progress.lever_is_down(Lever::Three),
@@ -429,6 +466,8 @@ mod tests {
                         | Progress::FoyerStep2
                         | Progress::FoyerStep3
                         | Progress::FrontDoorOpen
+                        | Progress::SignalRoom
+                        | Progress::SignalGateOpen
                         | Progress::Escaped
                 )
             );

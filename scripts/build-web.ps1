@@ -31,12 +31,18 @@ try {
     Copy-Item -LiteralPath 'index.html', 'style.css', 'bootstrap.js' -Destination $dist -Force
     Copy-Item -LiteralPath 'assets' -Destination $dist -Recurse -Force
     $artifact = Get-Item -LiteralPath (Join-Path $dist 'pkg/latch_bg.wasm')
+    $rawLength = $artifact.Length
     $gzipPath = Join-Path $dist 'pkg/latch_bg.wasm.gz'
     $inputStream = [IO.File]::OpenRead($artifact.FullName)
     try {
         $outputStream = [IO.File]::Create($gzipPath)
         try {
-            $gzipStream = [IO.Compression.GZipStream]::new($outputStream, [IO.Compression.CompressionLevel]::SmallestSize)
+            $level = if ([Enum]::IsDefined([IO.Compression.CompressionLevel], 'SmallestSize')) {
+                [IO.Compression.CompressionLevel]::SmallestSize
+            } else {
+                [IO.Compression.CompressionLevel]::Optimal
+            }
+            $gzipStream = [IO.Compression.GZipStream]::new($outputStream, $level)
             try { $inputStream.CopyTo($gzipStream) }
             finally { $gzipStream.Dispose() }
         }
@@ -55,12 +61,17 @@ try {
             $bytes = [IO.File]::ReadAllBytes($path)
             $versionInput.Write($bytes, 0, $bytes.Length)
         }
-        $version = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($versionInput.ToArray())).ToLowerInvariant()
+        $sha256 = [Security.Cryptography.SHA256]::Create()
+        try {
+            $hash = $sha256.ComputeHash($versionInput.ToArray())
+            $version = [BitConverter]::ToString($hash).Replace('-', '').ToLowerInvariant()
+        }
+        finally { $sha256.Dispose() }
     }
     finally { $versionInput.Dispose() }
     $htmlPath = Join-Path $dist 'index.html'
     $html = [IO.File]::ReadAllText($htmlPath).Replace('href="style.css"', "href=`"style.css?v=$version`"").Replace('src="bootstrap.js"', "src=`"bootstrap.js?v=$version`"")
     [IO.File]::WriteAllText($htmlPath, $html)
-    Write-Output ("已建立 dist，WASM 原始大小 {0:N2} MiB，靜態 gzip 交付檔案 {1:N2} MiB。" -f ($artifact.Length / 1MB), ($compressed.Length / 1MB))
+    Write-Output ("已建立 dist，WASM 原始大小 {0:N2} MiB，靜態 gzip 交付檔案 {1:N2} MiB。" -f ($rawLength / 1MB), ($compressed.Length / 1MB))
 }
 finally { Pop-Location }

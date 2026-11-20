@@ -238,6 +238,7 @@ impl BrowserUi {
             Exhibit::Letter => "letter",
             Exhibit::Timetable => "timetable",
             Exhibit::MoonMark => "moonmark",
+            Exhibit::SignalManual => "signal-manual",
         };
         for part in ["title", "eyebrow", "copy", "caption"] {
             self.dom.text(
@@ -358,6 +359,8 @@ fn objective(progress: Progress) -> MessageKey {
         | Progress::FoyerStep2
         | Progress::FoyerStep3 => MessageKey::ObjectiveFoyer,
         Progress::FrontDoorOpen => MessageKey::ObjectiveFrontDoor,
+        Progress::SignalRoom => MessageKey::ObjectiveSignalRoom,
+        Progress::SignalGateOpen => MessageKey::ObjectiveSignalGate,
         Progress::Escaped => MessageKey::ObjectiveEscaped,
     }
 }

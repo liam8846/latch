@@ -62,10 +62,10 @@ safe-copy = Enter the safe's four-digit code.
 code-label = Four-digit code
 safe-hint = Enter the four-digit code.
 safe-submit = Turn the bolt
-win-eyebrow = CHAPTER COMPLETE
+win-eyebrow = ESCAPE COMPLETE
 win-title = Keep the memory.
     Leave the past.
-win-copy = It is still night beyond the door.
+win-copy = You crossed the tidal signal room and reached the shore.
     You pocket the letter. This time, you know where to go.
 win-restart = Return to the study
 win-github = Visit GitHub
@@ -74,7 +74,7 @@ win-redirect = Redirecting to GitHub in { $seconds ->
    *[other] { $seconds } seconds
     }…
 win-redirecting = Redirecting to GitHub…
-win-footer = LATCH · END OF CHAPTER ONE
+win-footer = LATCH · ALL THREE ROOMS COMPLETE
 edition = AN ORIGINAL ROOM
 notice-restarted = The Midnight Study, once again.
 notice-latch-released = The brass balance levels out, and the bolt beside it slides free.
@@ -98,7 +98,7 @@ notice-lever-engaged = The brass lever locks down with a heavy metallic click.
 notice-levers-reset = Wrong sequence. All four levers snap back upright.
 notice-front-door-unlocked = The final bolt slides free. The street door swings into the night.
 notice-front-door-locked = An internal linked bolt holds the front door shut.
-notice-front-door-open = The front door stands open. Step out into the night.
+notice-front-door-open = The front door stands open. There is a signal room at the end of the passage.
 notice-escaped = Beyond the door, the air is finally moving.
 objective-search = Explore the study and find a way to release the safe's latch
 objective-latch = The latch is free. Find the four-digit code and open the safe
@@ -106,7 +106,7 @@ objective-safe = Read the letter in the safe and take the key
 objective-key = Use the brass key to unlock the study door
 objective-door = Pass through the study door into the foyer
 objective-foyer = Explore the foyer and find a way to unbolt the street door
-objective-front-door = The street door is open. Carry the letter into the night
+objective-front-door = Go through the street door and follow the lights in the passage
 objective-escaped = You found your way out
 target-note = Read the note
 target-safe-open = Read the letter again
@@ -204,3 +204,20 @@ moonmark-caption = Visible only when the foyer lights are off.
 
 error-renderer = Rendering stopped. Reload to try again. If this happens again, share the diagnostic details below.
 error-diagnostics = Diagnostic details
+
+notice-signal-room-entered = The passage opens into a tidal signal room. Two lamps still burn on the wall.
+notice-signal-gate-unlocked = Both receivers light up. The gate to the shore swings open.
+notice-signal-gate-locked = The gate has no power. Light both square receivers on the signal board.
+notice-signal-mirror-turned = The mirror clicks into its next position.
+notice-amber-received = The upper amber receiver lights up.
+notice-blue-received = The lower blue receiver lights up.
+objective-signal-room = Read the sign by the board and route both beams at once
+objective-signal-gate = Walk through the open gate to the shore
+target-signal-mirror = Turn the signal mirror
+target-signal-manual = Read the signal board instructions
+target-signal-gate = Inspect the shore gate
+signal-manual-eyebrow = TIDAL SIGNAL ROOM · WATCH INSTRUCTIONS
+signal-manual-title = Two lamps, one gate
+signal-manual-copy = The two round lamps on the left are the sources. Route the upper amber beam to the upper square receiver and the lower blue beam to the lower square receiver.
+    Each mirror has three settings. The horizontal bar lets light pass straight through. Either diagonal turns it by ninety degrees. The gate needs both receivers lit at the same time.
+signal-manual-caption = In pencil: “If you get stuck, trace back from a receiver. The beams can share a mirror.”

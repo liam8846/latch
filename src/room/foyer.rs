@@ -296,7 +296,7 @@ fn foyer_props(room: &mut Furnisher, assets: &AssetServer, palette: &Palette) {
     );
 }
 
-/// 建立南側臨街大門、熄燈後顯現的夜光塗漆暗記與門外星夜門廊。
+/// 建立南側臨街大門、夜光暗記及通往潮汐信號室的門廊。
 fn front_door_and_moon_mark(room: &mut Furnisher, palette: &Palette) {
     let glow_paint = room.materials.add(StandardMaterial {
         base_color: Color::srgb(0.45, 0.76, 1.0),
@@ -346,8 +346,8 @@ fn front_door_and_moon_mark(room: &mut Furnisher, palette: &Palette) {
         .add_children(&[door, panel, handle, bolt_bar]);
 
     room.block([0.5, 0.0, 15.1], [2.4, 0.06, 3.2], &palette.wood);
-    room.solid_block([0.5, 1.65, 16.7], [2.8, 3.4, 0.14], &palette.moon);
-    room.static_box([-0.6, 1.65, 15.2], [0.2, 3.4, 3.2]);
-    room.static_box([1.6, 1.65, 15.2], [0.2, 3.4, 3.2]);
+    room.solid_block([-0.6, 1.65, 15.2], [0.2, 3.4, 3.2], &palette.wall);
+    room.solid_block([1.6, 1.65, 15.2], [0.2, 3.4, 3.2], &palette.wall);
+    room.solid_block([0.5, 3.4, 15.2], [2.4, 0.12, 3.2], &palette.trim);
     room.light([0.5, 2.2, 15.3], [0.46, 0.62, 1.0], 720.0, false);
 }

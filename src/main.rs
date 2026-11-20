@@ -62,6 +62,7 @@ fn main() {
                 physics::update_pressure_plate,
                 interaction::focus_target,
                 room::animate,
+                room::signal::show_signals,
                 bridge::publish,
             )
                 .chain(),

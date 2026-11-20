@@ -3,3 +3,4 @@
 pub mod i18n;
 pub mod puzzle;
 pub mod score;
+pub mod signal;

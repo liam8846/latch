@@ -3,6 +3,7 @@ mod details;
 mod foyer;
 mod furniture;
 mod materials;
+pub mod signal;
 
 use crate::{Session, interaction::Target, physics::PressurePlate};
 use bevy::prelude::*;
@@ -15,6 +16,7 @@ pub enum Hinge {
     Safe,
     Exit,
     FrontDoor,
+    SignalGate,
 }
 
 #[derive(Component)]
@@ -214,6 +216,7 @@ pub fn setup(
         0.85,
     );
     foyer::setup(&mut room, &assets, &palette);
+    signal::setup(&mut room, &palette);
 }
 
 type MechanismAnimateQueries<'w, 's> = (
@@ -314,6 +317,7 @@ pub fn animate(
             Hinge::Safe => session.progress.safe_is_open(),
             Hinge::Exit => session.progress.door_is_open(),
             Hinge::FrontDoor => session.progress.front_door_is_open(),
+            Hinge::SignalGate => session.progress.signal_gate_is_open(),
         };
         let target = Quat::from_rotation_y(if open {
             -std::f32::consts::FRAC_PI_2 * 0.95
